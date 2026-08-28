@@ -1,12 +1,19 @@
 {
   "name": "tft",
-  "type": "module",
   "private": true,
+  "bin": {
+    "tft": "./bin/tft.ts"
+  },
+  "type": "module",
   "scripts": {
     "zig:build": "zig build",
-    "calc": "bun run zig:build && bun src/calc.ts",
     "screenshot": "bun scripts/screenshot.ts",
     "format": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "onnxruntime-node": "^1.29.0",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -14,9 +21,5 @@
   },
   "peerDependencies": {
     "typescript": "^7"
-  },
-  "dependencies": {
-    "onnxruntime-node": "^1.29.0",
-    "sharp": "^0.35.4"
   }
 }

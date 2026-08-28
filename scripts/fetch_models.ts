@@ -37,9 +37,7 @@ async function download(url: string, filename: string) {
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to download: ${response.status} ${response.statusText}`,
-    );
+    throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
   }
 
   await Bun.write(filename, response);

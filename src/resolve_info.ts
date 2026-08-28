@@ -51,7 +51,9 @@ const SHOP_NAME_PROFILES: AnchorProfile[] = [
 
 let runtimePromise: Promise<OcrRuntime> | undefined;
 
-export async function resolve_info(imageFilenameOrBytes: ImageFilenameOrBytes): Promise<ResolvedInfo> {
+export async function resolve_info(
+  imageFilenameOrBytes: ImageFilenameOrBytes,
+): Promise<ResolvedInfo> {
   const image = toSharpInput(imageFilenameOrBytes);
   const [metadata, runtime] = await Promise.all([sharp(image).metadata(), getRuntime()]);
   if (!metadata.width || !metadata.height) throw new Error("invalid image");
@@ -95,7 +97,10 @@ function loadCharacters(path: string): Promise<string[]> {
         PostProcess?: { character_dict?: unknown };
       };
       const characters = config.PostProcess?.character_dict;
-      if (!Array.isArray(characters) || !characters.every((character) => typeof character === "string")) {
+      if (
+        !Array.isArray(characters) ||
+        !characters.every((character) => typeof character === "string")
+      ) {
         throw new Error("character_dict was not found in recognition config");
       }
 
@@ -162,7 +167,10 @@ async function recognizeText(
 
   const inputHeight = 48;
   const inputWidth = 320;
-  const resizedWidth = Math.min(inputWidth, Math.max(1, Math.ceil((inputHeight * metadata.width) / metadata.height)));
+  const resizedWidth = Math.min(
+    inputWidth,
+    Math.max(1, Math.ceil((inputHeight * metadata.width) / metadata.height)),
+  );
   const { data } = await sharp(image)
     .removeAlpha()
     .resize(resizedWidth, inputHeight, { fit: "fill" })
@@ -206,7 +214,11 @@ async function recognizeText(
   };
 }
 
-function calculateRectangle(profile: AnchorProfile, imageWidth: number, imageHeight: number): Rectangle {
+function calculateRectangle(
+  profile: AnchorProfile,
+  imageWidth: number,
+  imageHeight: number,
+): Rectangle {
   const scale = imageHeight / BASE_HEIGHT;
   const width = Math.max(1, Math.round(profile.width * scale));
   const height = Math.max(1, Math.round(profile.height * scale));
@@ -245,7 +257,12 @@ function toDetTensor(data: Buffer, width: number, height: number): ort.Tensor {
   return new ort.Tensor("float32", tensor, [1, 3, height, width]);
 }
 
-function toRecTensor(data: Buffer, resizedWidth: number, width: number, height: number): ort.Tensor {
+function toRecTensor(
+  data: Buffer,
+  resizedWidth: number,
+  width: number,
+  height: number,
+): ort.Tensor {
   const plane = width * height;
   const tensor = new Float32Array(plane * 3);
 
