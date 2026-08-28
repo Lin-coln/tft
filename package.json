@@ -3,8 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build:zig": "zig build",
-    "calc": "bun run build:zig && bun src/calc.ts",
+    "zig:build": "zig build",
+    "calc": "bun run zig:build && bun src/calc.ts",
+    "screenshot": "bun scripts/screenshot.ts",
     "format": "oxfmt --no-error-on-unmatched-pattern"
   },
   "devDependencies": {
