@@ -1,6 +1,8 @@
-// scripts/fetch_tft_data.ts
-
 import { mkdir } from "node:fs/promises";
+
+/**
+ * https://github.com/CommunityDragon/CDTB
+ */
 
 const url =
   "https://raw.communitydragon.org/latest/cdragon/tft/zh_cn.json";

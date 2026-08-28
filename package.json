@@ -1,10 +1,13 @@
 {
   "name": "tft",
-  "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts":{
+    "format": "oxfmt --no-error-on-unmatched-pattern"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "oxfmt": "^0.65.0"
   },
   "peerDependencies": {
     "typescript": "^7"
