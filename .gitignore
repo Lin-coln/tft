@@ -35,4 +35,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 .venv
 
+.zig-cache
+.zig-global-cache
+zig-out
+
 riot-data

@@ -2,7 +2,9 @@
   "name": "tft",
   "type": "module",
   "private": true,
-  "scripts":{
+  "scripts": {
+    "build:zig": "zig build",
+    "calc": "bun run build:zig && bun src/calc.ts",
     "format": "oxfmt --no-error-on-unmatched-pattern"
   },
   "devDependencies": {
