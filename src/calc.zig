@@ -1,18 +1,24 @@
+const builtin = @import("builtin");
+const napi = @import("napi-zig");
 const std = @import("std");
 
-export fn add(a: f64, b: f64) callconv(.c) f64 {
+comptime {
+    if (!builtin.is_test) napi.module(@This());
+}
+
+pub fn add(a: f64, b: f64) f64 {
     return a + b;
 }
 
-export fn subtract(a: f64, b: f64) callconv(.c) f64 {
+pub fn subtract(a: f64, b: f64) f64 {
     return a - b;
 }
 
-export fn multiply(a: f64, b: f64) callconv(.c) f64 {
+pub fn multiply(a: f64, b: f64) f64 {
     return a * b;
 }
 
-export fn divide(a: f64, b: f64) callconv(.c) f64 {
+pub fn divide(a: f64, b: f64) f64 {
     return a / b;
 }
 
