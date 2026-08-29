@@ -18,7 +18,7 @@ export const command = new Command("resolve")
 
     const info = { shop, level, economy };
 
-    process.stdout.write(`${JSON.stringify(info, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(info  )}\n`);
   });
 
 async function readTargetFromStdin(): Promise<string> {

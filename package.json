@@ -9,7 +9,8 @@
     "prepare": "husky",
     "zig:build": "zig build",
     "screenshot": "bun scripts/screenshot.ts",
-    "format": "oxfmt --no-error-on-unmatched-pattern"
+    "format": "oxfmt --no-error-on-unmatched-pattern",
+    "fetch:assets": "bun run scripts/fetch_tft_data.ts && bun scripts/fetch_models.ts"
   },
   "dependencies": {
     "commander": "^15.0.0",
