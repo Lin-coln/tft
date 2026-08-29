@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 
 try {
   const [_bun, tft, ...argv] = process.argv;
@@ -10,27 +11,49 @@ try {
     throw new Error("failed to resolve argv");
   }
 
-  const chain: CommandInfo[] = [];
+  const chain: [...CommandInfo[], CommandInfo | CommandInfo[]] = [] as any;
   let dir = resolve(import.meta.dirname, "../cmd");
   for (const arg of argv) {
-    if (arg.startsWith("-")) break;
+    // command
+    if (!arg.startsWith("-")) {
+      const info = resolveCommandInfo(arg, dir);
+      if (!info) break;
 
-    const info = resolveCommandInfo(arg, dir);
-    if (!info) break;
+      chain.push(info);
+      if (!info.nextDirname) break;
+      dir = info.nextDirname;
+      continue;
+    }
 
-    chain.push(info);
-    if (info.isLeaf) break;
-    dir = info.nextDirname;
+    // option: -h
+    if (["-h", "--help"].includes(arg)) {
+      // load children commands for show helps
+      chain.push(await resolveNestedCommandInfos(dir));
+    }
+
+    break;
   }
 
   const program = new Command("tft");
   let parent = program;
-  await Promise.all(chain.map((x) => x.toCommand())).then((arr: Command[]) =>
-    arr.forEach((cmd) => {
-      parent.addCommand(cmd);
-      parent = cmd;
+  await Promise.all(
+    chain.map((x) => {
+      if (!Array.isArray(x)) {
+        return x.toCommand();
+      } else {
+        return Promise.all(x.map((x) => x.toCommand()));
+      }
     }),
-  );
+  ).then((arr) => {
+    return arr.forEach((x: Command | Command[]) => {
+      if (!Array.isArray(x)) {
+        parent.addCommand(x);
+        parent = x;
+      } else {
+        x.forEach((x) => parent.addCommand(x));
+      }
+    });
+  });
   await program.parseAsync(argv, { from: "user" });
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
@@ -39,8 +62,7 @@ try {
 
 type CommandInfo = {
   readonly name: string;
-  readonly isLeaf: boolean;
-  readonly nextDirname: string;
+  readonly nextDirname: string | null;
   toCommand(): Promise<Command>;
 };
 
@@ -49,8 +71,7 @@ function resolveCommandInfo(name: string, dir: string): CommandInfo | void {
   if (existsSync(filename)) {
     return {
       name,
-      isLeaf: true,
-      nextDirname: dir,
+      nextDirname: null,
       toCommand: () => import(filename).then(resolveCommand),
     };
   }
@@ -59,11 +80,20 @@ function resolveCommandInfo(name: string, dir: string): CommandInfo | void {
   if (existsSync(filename)) {
     return {
       name,
-      isLeaf: false,
       nextDirname: resolve(dir, name),
       toCommand: () => import(filename).then(resolveCommand),
     };
   }
+}
+
+async function resolveNestedCommandInfos(dir: string) {
+  const items = await readdir(dir, { withFileTypes: true });
+  return items
+    .map((x) => {
+      if (x.name === "index.ts") return;
+      return resolveCommandInfo(x.name, dir);
+    })
+    .filter((x) => !!x);
 }
 
 async function resolveCommand(module: unknown): Promise<Command> {
