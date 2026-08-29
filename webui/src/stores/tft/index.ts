@@ -18,3 +18,4 @@ export const useTFTStore = store;
 
 export const start = /* @__PURE__ */ toAction("start");
 export const stop = /* @__PURE__ */ toAction("stop");
+export const screenshot = /* @__PURE__ */ toAction("screenshot");

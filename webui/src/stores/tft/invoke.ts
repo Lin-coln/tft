@@ -15,6 +15,12 @@ export async function invoke(name: string, args: any[]) {
     throw new Error(`Failed to fetch - ${resp.status} ${resp.statusText}`);
   }
 
+  const contentType = resp.headers.get("Content-Type") ?? "";
+
+  if (contentType.includes("application/octet-stream")) {
+    return new Uint8Array(await resp.arrayBuffer());
+  }
+
   const result = await resp.json();
 
   if ("error" in result) {

@@ -1,3 +1,4 @@
+import { screenshot as captureScreenshot } from "@tft/core";
 import { store } from "./utils.ts";
 
 export { store } from "./utils.ts";
@@ -10,4 +11,8 @@ export async function start() {
 export async function stop() {
   if (store.getState().status === "idle") return;
   store.setState({ status: "idle" });
+}
+
+export async function screenshot() {
+  return captureScreenshot();
 }

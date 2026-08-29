@@ -3,16 +3,18 @@ import clsx from "clsx";
 import {
   HiOutlineArrowUpRight,
   HiOutlineBolt,
+  HiOutlineCamera,
   HiOutlineChartBar,
   HiOutlineHome,
   HiOutlinePlay,
+  HiOutlinePhoto,
   HiOutlineQueueList,
   HiOutlineCog6Tooth,
   HiOutlineSquare2Stack,
   HiOutlineStop,
 } from "react-icons/hi2";
 import { connect, useClientId } from "@stores/event";
-import { start, stop, useTFTStore } from "@stores/tft";
+import { screenshot, start, stop, useTFTStore } from "@stores/tft";
 import { useResolvedAppearance } from "@stores/preference";
 import { Inspector } from "./Inspector";
 import { Settings } from "./Settings";
@@ -30,6 +32,9 @@ export function App() {
   const appearance = useResolvedAppearance();
   const [activePanel, setActivePanel] = useState<"inspector" | "settings" | null>(null);
   const [pending, setPending] = useState(false);
+  const [capturePending, setCapturePending] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const inspectorId = useId();
   const settingsId = useId();
   const isRunning = tft.status === "running";
@@ -38,6 +43,12 @@ export function App() {
     document.documentElement.dataset.appearance = appearance;
     document.documentElement.style.colorScheme = appearance;
   }, [appearance]);
+
+  useEffect(() => {
+    return () => {
+      if (screenshotUrl) URL.revokeObjectURL(screenshotUrl);
+    };
+  }, [screenshotUrl]);
 
   async function toggleService() {
     setPending(true);
@@ -48,68 +59,117 @@ export function App() {
     }
   }
 
+  async function captureScreenshot() {
+    setCapturePending(true);
+    setCaptureError(null);
+
+    try {
+      const data = await screenshot();
+      setScreenshotUrl(
+        URL.createObjectURL(new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" })),
+      );
+    } catch (error) {
+      setCaptureError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCapturePending(false);
+    }
+  }
+
   return (
     <main className="relative min-h-dvh overflow-hidden bg-white text-[#171717] dark:bg-[#050505] dark:text-[#ededed]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.04)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_72%)] dark:bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
-      <header className="relative z-10 flex h-16 items-center justify-between border-b border-black/10 px-5 dark:border-white/10 sm:px-8">
-        <div className="flex items-center gap-3">
-          <div className="grid size-7 place-items-center rounded-md border border-black/15 bg-[#171717] text-[11px] font-black tracking-[-0.08em] text-white dark:border-white/15 dark:bg-white dark:text-black">
-            TF
+      <section className="relative z-10 mx-auto flex min-h-dvh max-w-7xl flex-col px-5 pb-32 pt-6 sm:px-8 sm:pt-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-black/40 dark:text-white/35">
+              <HiOutlineBolt className="size-3.5" /> Session control
+              <span
+                className={clsx(
+                  "ml-1 size-1.5 rounded-full",
+                  isRunning
+                    ? "bg-[#52a8ff] shadow-[0_0_8px_#52a8ff]"
+                    : "bg-black/25 dark:bg-white/25",
+                )}
+              />
+              <span className="font-mono tracking-[0.12em]">{isRunning ? "Live" : "Standby"}</span>
+            </div>
+            <h1 className="text-balance text-[clamp(2rem,3vw,3rem)] font-semibold leading-none tracking-[-0.05em] text-[#171717] dark:text-white">
+              Read the board. Make the move.
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-5 text-black/40 dark:text-white/40">
+              Capture and inspect the current TFT board.
+            </p>
           </div>
-          <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
-          <span className="text-[13px] font-medium text-black/65 dark:text-white/65">
-            Match workspace
-          </span>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={toggleService}
+              className={clsx(
+                "group inline-flex h-10 items-center gap-2 rounded-md px-4 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 disabled:cursor-wait disabled:opacity-50 dark:focus-visible:ring-white/60",
+                isRunning
+                  ? "border border-black/10 bg-black/[0.04] text-[#171717] hover:bg-black/[0.08] dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08]"
+                  : "bg-[#171717] text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85",
+              )}
+            >
+              {isRunning ? (
+                <HiOutlineStop className="size-4" />
+              ) : (
+                <HiOutlinePlay className="size-4" />
+              )}
+              {pending ? "Updating…" : isRunning ? "Stop session" : "Start session"}
+              {!isRunning && (
+                <HiOutlineArrowUpRight className="ml-1 size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={capturePending}
+              onClick={captureScreenshot}
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-black/10 bg-white/70 px-4 text-[13px] font-medium text-black/65 transition hover:border-black/20 hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 disabled:cursor-wait disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65 dark:hover:border-white/20 dark:hover:bg-white/[0.08] dark:hover:text-white dark:focus-visible:ring-white/60"
+            >
+              <HiOutlineCamera className={clsx("size-4", capturePending && "animate-pulse")} />
+              {capturePending ? "Capturing…" : "Screenshot"}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-black/40 dark:text-white/35">
-          <span
-            className={clsx(
-              "size-1.5 rounded-full",
-              isRunning ? "bg-[#52a8ff] shadow-[0_0_8px_#52a8ff]" : "bg-black/25 dark:bg-white/25",
-            )}
-          />
-          {isRunning ? "Live" : "Standby"}
-        </div>
-      </header>
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] max-w-6xl flex-col justify-between px-5 pb-32 pt-16 sm:px-8 sm:pt-24">
-        <div>
-          <div className="mb-8 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-black/40 dark:text-white/35">
-            <HiOutlineBolt className="size-3.5" /> Session control
+        <div className="mt-6">
+          <div className="mb-2.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/30">
+            <span>Board capture</span>
+            <span>{screenshotUrl ? "Latest frame" : "No screenshot"}</span>
           </div>
-          <h1 className="max-w-3xl text-balance text-[clamp(2.8rem,7vw,6.8rem)] font-semibold leading-[0.92] tracking-[-0.065em] text-[#171717] dark:text-white">
-            Read the board.
-            <br />
-            Make the move.
-          </h1>
-          <p className="mt-7 max-w-lg text-pretty text-sm leading-6 text-black/45 dark:text-white/45 sm:text-base sm:leading-7">
-            A quiet control surface for live TFT analysis. Start the service to capture the board
-            and inspect the current session.
-          </p>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={toggleService}
-            className={clsx(
-              "group mt-9 inline-flex h-10 items-center gap-2 rounded-md px-4 text-[13px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 disabled:cursor-wait disabled:opacity-50 dark:focus-visible:ring-white/60",
-              isRunning
-                ? "border border-black/10 bg-black/[0.04] text-[#171717] hover:bg-black/[0.08] dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08]"
-                : "bg-[#171717] text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/85",
-            )}
-          >
-            {isRunning ? (
-              <HiOutlineStop className="size-4" />
+          <div className="relative grid aspect-video place-items-center overflow-hidden rounded-xl border border-black/10 bg-[#eeeeec] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)] dark:border-white/10 dark:bg-[#0a0a0a] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+            <span className="pointer-events-none absolute left-3 top-3 size-5 border-l border-t border-black/20 dark:border-white/20" />
+            <span className="pointer-events-none absolute bottom-3 right-3 size-5 border-b border-r border-black/20 dark:border-white/20" />
+            {screenshotUrl ? (
+              <img
+                src={screenshotUrl}
+                alt="Latest TFT board screenshot"
+                className="h-full w-full object-contain"
+              />
             ) : (
-              <HiOutlinePlay className="size-4" />
+              <div className="flex flex-col items-center px-6 py-16 text-center">
+                <div className="grid size-12 place-items-center rounded-full border border-black/10 bg-white/60 text-black/30 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/30">
+                  <HiOutlinePhoto className="size-5" />
+                </div>
+                <p className="mt-4 text-sm font-medium text-black/55 dark:text-white/55">
+                  No screenshot yet
+                </p>
+                <p className="mt-1.5 max-w-xs text-xs leading-5 text-black/35 dark:text-white/30">
+                  Capture a frame to preview the current board here.
+                </p>
+              </div>
             )}
-            {pending ? "Updating…" : isRunning ? "Stop session" : "Start session"}
-            {!isRunning && (
-              <HiOutlineArrowUpRight className="ml-1 size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            )}
-          </button>
+          </div>
+          {captureError && (
+            <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
+              Screenshot failed: {captureError}
+            </p>
+          )}
         </div>
 
-        <div className="mt-20 grid max-w-2xl grid-cols-2 border-y border-black/10 dark:border-white/10 sm:grid-cols-3">
+        <div className="mt-6 grid max-w-2xl grid-cols-2 border-y border-black/10 dark:border-white/10 sm:grid-cols-3">
           <Metric label="Service" value={isRunning ? "Running" : "Idle"} />
           <Metric label="Transport" value="SSE" />
           <Metric
