@@ -1,0 +1,12 @@
+{
+  "name": "cli",
+  "private": true,
+  "bin": {
+    "tft": "./bin/tft.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@tft/core": "workspace:*",
+    "commander": "^15.0.0"
+  }
+}

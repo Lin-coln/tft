@@ -2,27 +2,19 @@
   "name": "tft",
   "private": true,
   "author": "lin-coln",
-  "bin": {
-    "tft": "./bin/tft.ts"
-  },
   "workspaces": {
     "packages": [
-      "webui"
+      "webui",
+      "cli",
+      "core"
     ]
   },
   "type": "module",
   "scripts": {
     "webui:dev": "bun --cwd=webui run dev",
     "prepare": "husky",
-    "zig:build": "zig build",
-    "screenshot": "bun scripts/screenshot.ts",
     "format": "oxfmt --no-error-on-unmatched-pattern",
-    "fetch:assets": "bun run scripts/fetch_tft_data.ts && bun scripts/fetch_models.ts"
-  },
-  "dependencies": {
-    "commander": "^15.0.0",
-    "onnxruntime-node": "^1.29.0",
-    "sharp": "^0.35.4"
+    "cli:link": "cd cli && bun link"
   },
   "devDependencies": {
     "@types/bun": "latest",

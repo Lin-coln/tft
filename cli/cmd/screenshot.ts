@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdir } from "node:fs/promises";
-import { screenshot } from "@/src/screenshot.ts";
+import { screenshot } from "@tft/core";
 
 export const command = new Command("screenshot")
   .description("Capture the current LDPlayer screen")

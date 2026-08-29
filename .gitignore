@@ -33,12 +33,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-.venv
 
-.zig-cache
-.zig-global-cache
-zig-out
-zig-pkg
-
-riot-data
-assets/models
+core/riot-data
+core/assets/models
