@@ -1,57 +1,83 @@
 #!/usr/bin/env bun
 
-import { mkdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
 import { Command } from "commander";
+import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 
-import { resolve_economy } from "../src/resolve_economy.ts";
-import { resolve_level } from "../src/resolve_level.ts";
-import { resolve_shop } from "../src/resolve_shop.ts";
-import { screenshot } from "../src/screenshot.ts";
+try {
+  const [_bun, tft, ...argv] = process.argv;
+  if (tft !== import.meta.filename) {
+    throw new Error("failed to resolve argv");
+  }
 
-interface ScreenshotOptions {
-  out?: string;
-}
+  const chain: CommandInfo[] = [];
+  let dir = resolve(import.meta.dirname, "../cmd");
+  for (const arg of argv) {
+    if (arg.startsWith("-")) break;
 
-const program = new Command();
+    const info = resolveCommandInfo(arg, dir);
+    if (!info) break;
 
-program.name("tft");
+    chain.push(info);
+    if (info.isLeaf) break;
+    dir = info.nextDirname;
+  }
 
-program
-  .command("screenshot")
-  .description("Capture the current LDPlayer screen")
-  .option("--out <filename>", "output PNG filename")
-  .action(async (options: ScreenshotOptions) => {
-    const output = resolve(options.out ?? join(tmpdir(), `tft-screenshot-${Date.now()}.png`));
-    await mkdir(dirname(output), { recursive: true });
-    await Bun.write(output, await screenshot());
-    process.stdout.write(`${output}\n`);
-  });
-
-program
-  .command("resolve_info")
-  .description("Resolve TFT information from a piped image path")
-  .action(async () => {
-    const target = await readTargetFromStdin();
-    const [shop, level, economy] = await Promise.all([
-      resolve_shop(target),
-      resolve_level(target),
-      resolve_economy(target),
-    ]);
-    const info = { shop, level, economy };
-    process.stdout.write(`${JSON.stringify(info, null, 2)}\n`);
-  });
-
-await program.parseAsync().catch((error: unknown) => {
+  const program = new Command("tft");
+  let parent = program;
+  await Promise.all(chain.map((x) => x.toCommand())).then((arr: Command[]) =>
+    arr.forEach((cmd) => {
+      parent.addCommand(cmd);
+      parent = cmd;
+    }),
+  );
+  await program.parseAsync(argv, { from: "user" });
+} catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
-});
+}
 
-async function readTargetFromStdin(): Promise<string> {
-  if (process.stdin.isTTY) throw new Error("missing piped screenshot path");
+type CommandInfo = {
+  readonly name: string;
+  readonly isLeaf: boolean;
+  readonly nextDirname: string;
+  toCommand(): Promise<Command>;
+};
 
-  const target = (await Bun.stdin.text()).trim();
-  if (!target) throw new Error("missing piped screenshot path");
-  return resolve(target);
+function resolveCommandInfo(name: string, dir: string): CommandInfo | void {
+  let filename = resolve(dir, `${name}.ts`);
+  if (existsSync(filename)) {
+    return {
+      name,
+      isLeaf: true,
+      nextDirname: dir,
+      toCommand: () => import(filename).then(resolveCommand),
+    };
+  }
+
+  filename = resolve(dir, `${name}/index.ts`);
+  if (existsSync(filename)) {
+    return {
+      name,
+      isLeaf: false,
+      nextDirname: resolve(dir, name),
+      toCommand: () => import(filename).then(resolveCommand),
+    };
+  }
+}
+
+async function resolveCommand(module: unknown): Promise<Command> {
+  if (!module || typeof module !== "object") {
+    throw new Error("invalid module found");
+  }
+
+  if ("command" in module && module.command && typeof module.command === "object") {
+    return module.command as Command;
+  }
+
+  if ("makeCommand" in module && module.makeCommand && typeof module.makeCommand === "function") {
+    return module.makeCommand() as Promise<Command>;
+  }
+
+  throw new Error("failed to resolveCommand");
 }
