@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-appearance="dark"], [data-appearance="dark"] *));
+
 * {
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
   -webkit-user-drag: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   @apply select-none;
-  @apply bg-[#050505] text-[#ffffffea];
+  @apply bg-[#ededed] text-[#171717];
+  @apply dark:bg-[#050505] dark:text-[#ededed];
   @apply font-sans text-sm tabular-nums;
 }
