@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import clsx from "clsx";
+import { cx } from "class-variance-authority";
 import { HiOutlineCamera, HiOutlinePhoto } from "react-icons/hi2";
 
+import { Button } from "@components/Button";
 import { screenshot } from "@stores/tft";
 
 export function Screenshot() {
@@ -38,15 +39,16 @@ export function Screenshot() {
           <span>Board capture</span>
           <span>{url ? "Latest frame" : "No screenshot"}</span>
         </div>
-        <button
-          type="button"
+        <Button
           disabled={pending}
           onClick={capture}
-          className="inline-flex h-8 items-center gap-2 rounded-md border border-black/10 bg-white/70 px-3 text-[11px] font-medium text-black/65 transition hover:border-black/20 hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 disabled:cursor-wait disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65 dark:hover:border-white/20 dark:hover:bg-white/[0.08] dark:hover:text-white dark:focus-visible:ring-white/60"
+          variant="outline"
+          size="xs"
+          className={cx("disabled:cursor-wait")}
         >
-          <HiOutlineCamera className={clsx("size-3.5", pending && "animate-pulse")} />
+          <HiOutlineCamera className={cx("size-3.5", pending && "animate-pulse")} />
           {pending ? "Capturing…" : "Screenshot"}
-        </button>
+        </Button>
       </div>
 
       <div className="relative grid aspect-video place-items-center overflow-hidden rounded-xl border border-black/10 bg-[#eeeeec] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)] dark:border-white/10 dark:bg-[#0a0a0a] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">

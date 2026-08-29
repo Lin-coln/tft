@@ -31,7 +31,9 @@
     "paths": {
       "@shared/*": ["./shared/*"],
       "@services/*": ["./services/*"],
-      "@stores/*": ["./src/stores/*"]
+      // bun server needs them
+      "@stores/*": ["./src/stores/*"],
+      "@components/*": ["./src/components/*"]
     }
   },
   "exclude": ["node_modules", "src"]

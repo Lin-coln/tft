@@ -30,6 +30,7 @@
     // paths
     "paths": {
       "@shared/*": ["../shared/*"],
+      "@components/*": ["./components/*"],
       "@stores/*": ["./stores/*"]
     }
   },
