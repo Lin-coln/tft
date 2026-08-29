@@ -86,7 +86,11 @@ export function App() {
                 : "bg-white text-black hover:bg-white/85",
             )}
           >
-            {isRunning ? <HiOutlineStop className="size-4" /> : <HiOutlinePlay className="size-4" />}
+            {isRunning ? (
+              <HiOutlineStop className="size-4" />
+            ) : (
+              <HiOutlinePlay className="size-4" />
+            )}
             {pending ? "Updating…" : isRunning ? "Stop session" : "Start session"}
             {!isRunning && (
               <HiOutlineArrowUpRight className="ml-1 size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -176,9 +180,7 @@ function Metric({
       )}
     >
       <div className="text-[10px] uppercase tracking-[0.16em] text-white/30">{label}</div>
-      <div className={clsx("mt-2 text-sm text-white/75", mono && "font-mono text-xs")}>
-        {value}
-      </div>
+      <div className={clsx("mt-2 text-sm text-white/75", mono && "font-mono text-xs")}>{value}</div>
     </div>
   );
 }
