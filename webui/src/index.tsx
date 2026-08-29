@@ -2,7 +2,8 @@ import { createRoot } from "react-dom/client";
 import { StrictMode, useEffect } from "react";
 
 import "./index.css";
-import { connect, useEvents, useEventStore } from "./stores/event";
+import { connect, useClientId } from "./stores/event";
+import { start, stop, useTFTStore } from "./stores/tft";
 
 const app = (
   <StrictMode>
@@ -23,18 +24,36 @@ if (import.meta.hot) {
 function App() {
   useEffect(() => connect(), []);
 
-  const clientId = useEventStore((s) => s.clientId);
+  const clientId = useClientId();
 
-  useEvents((event) => {
-    console.log(event);
-  });
+  const tft = useTFTStore();
 
   return (
     <div>
       <h2>{clientId}</h2>
-      Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias aspernatur, aut cupiditate
-      dolorum earum enim fugiat ipsum iusto labore nemo nobis officia officiis porro qui tempora
-      unde veritatis voluptates voluptatum.
+
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias aspernatur, aut cupiditate
+        dolorum earum enim fugiat ipsum iusto labore nemo nobis officia officiis porro qui tempora
+        unde veritatis voluptates voluptatum.
+      </p>
+
+      <div>
+        <div>TFT State</div>
+        <div className="whitespace-pre-wrap">{JSON.stringify(tft, null, 2)}</div>
+
+        <button
+          onClick={() => {
+            if (tft.status === "idle") {
+              start();
+            } else {
+              stop();
+            }
+          }}
+        >
+          toggle
+        </button>
+      </div>
     </div>
   );
 }

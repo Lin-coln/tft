@@ -1,4 +1,4 @@
-import { send, on } from "@services/sse.ts";
+import { on } from "@services/sse/index.ts";
 import type { ServerEvent } from "@shared/index.ts";
 
 export const handleEvents = {
