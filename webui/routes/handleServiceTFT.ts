@@ -3,7 +3,7 @@ import type { TFTState } from "@shared/index.ts";
 
 type Req = Bun.BunRequest<"/api/services/tft">;
 
-const actions: TFTState.Actions = { screenshot, start, stop };
+const actions: TFTState.Actions = { start, stop, screenshot };
 
 export const handleServiceTFT = {
   GET(req: Req) {

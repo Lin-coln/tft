@@ -3,21 +3,21 @@ import clsx from "clsx";
 import {
   HiOutlineArrowUpRight,
   HiOutlineBolt,
-  HiOutlineCamera,
   HiOutlineChartBar,
   HiOutlineHome,
   HiOutlinePlay,
-  HiOutlinePhoto,
   HiOutlineQueueList,
   HiOutlineCog6Tooth,
   HiOutlineSquare2Stack,
   HiOutlineStop,
 } from "react-icons/hi2";
 import { connect, useClientId } from "@stores/event";
-import { screenshot, start, stop, useTFTStore } from "@stores/tft";
+import { start, stop, useTFTStore } from "@stores/tft";
 import { useResolvedAppearance } from "@stores/preference";
 import { Inspector } from "./Inspector";
 import { Settings } from "./Settings";
+import { State } from "./State";
+import { Screenshot } from "./Screenshot";
 
 const navigation = [
   { label: "Overview", icon: HiOutlineHome, active: true },
@@ -30,13 +30,11 @@ export function App() {
   const clientId = useClientId();
   const tft = useTFTStore();
   const appearance = useResolvedAppearance();
-  const [activePanel, setActivePanel] = useState<"inspector" | "settings" | null>(null);
+  const [activePanel, setActivePanel] = useState<"inspector" | "settings" | "state" | null>(null);
   const [pending, setPending] = useState(false);
-  const [capturePending, setCapturePending] = useState(false);
-  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  const [captureError, setCaptureError] = useState<string | null>(null);
   const inspectorId = useId();
   const settingsId = useId();
+  const stateId = useId();
   const isRunning = tft.status === "running";
 
   useEffect(() => {
@@ -44,34 +42,12 @@ export function App() {
     document.documentElement.style.colorScheme = appearance;
   }, [appearance]);
 
-  useEffect(() => {
-    return () => {
-      if (screenshotUrl) URL.revokeObjectURL(screenshotUrl);
-    };
-  }, [screenshotUrl]);
-
   async function toggleService() {
     setPending(true);
     try {
       await (isRunning ? stop() : start());
     } finally {
       setPending(false);
-    }
-  }
-
-  async function captureScreenshot() {
-    setCapturePending(true);
-    setCaptureError(null);
-
-    try {
-      const data = await screenshot();
-      setScreenshotUrl(
-        URL.createObjectURL(new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" })),
-      );
-    } catch (error) {
-      setCaptureError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setCapturePending(false);
     }
   }
 
@@ -122,63 +98,10 @@ export function App() {
                 <HiOutlineArrowUpRight className="ml-1 size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               )}
             </button>
-            <button
-              type="button"
-              disabled={capturePending}
-              onClick={captureScreenshot}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-black/10 bg-white/70 px-4 text-[13px] font-medium text-black/65 transition hover:border-black/20 hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 disabled:cursor-wait disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65 dark:hover:border-white/20 dark:hover:bg-white/[0.08] dark:hover:text-white dark:focus-visible:ring-white/60"
-            >
-              <HiOutlineCamera className={clsx("size-4", capturePending && "animate-pulse")} />
-              {capturePending ? "Capturing…" : "Screenshot"}
-            </button>
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="mb-2.5 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/30">
-            <span>Board capture</span>
-            <span>{screenshotUrl ? "Latest frame" : "No screenshot"}</span>
-          </div>
-          <div className="relative grid aspect-video place-items-center overflow-hidden rounded-xl border border-black/10 bg-[#eeeeec] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55)] dark:border-white/10 dark:bg-[#0a0a0a] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
-            <span className="pointer-events-none absolute left-3 top-3 size-5 border-l border-t border-black/20 dark:border-white/20" />
-            <span className="pointer-events-none absolute bottom-3 right-3 size-5 border-b border-r border-black/20 dark:border-white/20" />
-            {screenshotUrl ? (
-              <img
-                src={screenshotUrl}
-                alt="Latest TFT board screenshot"
-                className="h-full w-full object-contain"
-              />
-            ) : (
-              <div className="flex flex-col items-center px-6 py-16 text-center">
-                <div className="grid size-12 place-items-center rounded-full border border-black/10 bg-white/60 text-black/30 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/30">
-                  <HiOutlinePhoto className="size-5" />
-                </div>
-                <p className="mt-4 text-sm font-medium text-black/55 dark:text-white/55">
-                  No screenshot yet
-                </p>
-                <p className="mt-1.5 max-w-xs text-xs leading-5 text-black/35 dark:text-white/30">
-                  Capture a frame to preview the current board here.
-                </p>
-              </div>
-            )}
-          </div>
-          {captureError && (
-            <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
-              Screenshot failed: {captureError}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-6 grid max-w-2xl grid-cols-2 border-y border-black/10 dark:border-white/10 sm:grid-cols-3">
-          <Metric label="Service" value={isRunning ? "Running" : "Idle"} />
-          <Metric label="Transport" value="SSE" />
-          <Metric
-            className="col-span-2 border-t border-black/10 dark:border-white/10 sm:col-span-1 sm:border-t-0"
-            label="Client"
-            value={clientId.slice(0, 8)}
-            mono
-          />
-        </div>
+        <Screenshot />
       </section>
 
       <div className="fixed inset-x-0 bottom-5 z-40 flex justify-center px-4 sm:bottom-7">
@@ -204,18 +127,19 @@ export function App() {
           <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
           <button
             type="button"
-            aria-label="Toggle settings"
-            aria-expanded={activePanel === "settings"}
-            aria-controls={settingsId}
-            onClick={() => setActivePanel((panel) => (panel === "settings" ? null : "settings"))}
+            aria-label="Toggle state"
+            aria-expanded={activePanel === "state"}
+            aria-controls={stateId}
+            onClick={() => setActivePanel((panel) => (panel === "state" ? null : "state"))}
             className={clsx(
-              "grid size-9 place-items-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50 dark:focus-visible:ring-white/50",
-              activePanel === "settings"
+              "flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50 dark:focus-visible:ring-white/50",
+              activePanel === "state"
                 ? "bg-[#171717] text-white dark:bg-white dark:text-black"
-                : "text-black/40 hover:bg-black/[0.06] hover:text-black/75 dark:text-white/35 dark:hover:bg-white/[0.06] dark:hover:text-white/75",
+                : "text-black/60 hover:bg-black/[0.06] hover:text-black dark:text-white/60 dark:hover:bg-white/[0.06] dark:hover:text-white",
             )}
           >
-            <HiOutlineCog6Tooth className="size-[17px]" />
+            <HiOutlineSquare2Stack className="size-[17px]" />
+            <span>State</span>
           </button>
           <button
             type="button"
@@ -233,6 +157,21 @@ export function App() {
             <HiOutlineQueueList className="size-[17px]" />
             <span>Inspector</span>
           </button>
+          <button
+            type="button"
+            aria-label="Toggle settings"
+            aria-expanded={activePanel === "settings"}
+            aria-controls={settingsId}
+            onClick={() => setActivePanel((panel) => (panel === "settings" ? null : "settings"))}
+            className={clsx(
+              "grid size-9 place-items-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50 dark:focus-visible:ring-white/50",
+              activePanel === "settings"
+                ? "bg-[#171717] text-white dark:bg-white dark:text-black"
+                : "text-black/40 hover:bg-black/[0.06] hover:text-black/75 dark:text-white/35 dark:hover:bg-white/[0.06] dark:hover:text-white/75",
+            )}
+          >
+            <HiOutlineCog6Tooth className="size-[17px]" />
+          </button>
         </nav>
       </div>
 
@@ -247,39 +186,9 @@ export function App() {
       {activePanel === "settings" && (
         <Settings id={settingsId} onClose={() => setActivePanel(null)} />
       )}
-    </main>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  mono,
-  className,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={clsx(
-        "py-5 pr-8 sm:border-r sm:border-black/10 sm:px-6 sm:first:pl-0 sm:last:border-r-0 dark:sm:border-white/10",
-        className,
+      {activePanel === "state" && (
+        <State id={stateId} onClose={() => setActivePanel(null)} state={tft} />
       )}
-    >
-      <div className="text-[10px] uppercase tracking-[0.16em] text-black/40 dark:text-white/30">
-        {label}
-      </div>
-      <div
-        className={clsx(
-          "mt-2 text-sm text-black/70 dark:text-white/75",
-          mono && "font-mono text-xs",
-        )}
-      >
-        {value}
-      </div>
-    </div>
+    </main>
   );
 }
