@@ -10,7 +10,8 @@ body {
   @apply select-none;
   @apply text-sm;
 
-  font-family: -apple-system, Helvetica, Arial, Tahoma, PingFangSC, sans-serif, "Segoe UI Emoji", "Noto Emoji";
+  font-family:
+    -apple-system, Helvetica, Arial, Tahoma, PingFangSC, sans-serif, "Segoe UI Emoji", "Noto Emoji";
   font-variant-numeric: tabular-nums;
 
   @apply bg-[#141416] text-[#ffffffea];

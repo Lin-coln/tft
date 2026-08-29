@@ -32,8 +32,5 @@
       "@/*": ["./*"]
     }
   },
-  "exclude": ["node_modules", "webui", ".venv",
-    "core/riot-data",
-    "core/assets"
-  ]
+  "exclude": ["node_modules", "webui", ".venv", "core/riot-data", "core/assets"]
 }
