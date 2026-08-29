@@ -30,7 +30,8 @@
     // paths
     "paths": {
       "@shared/*": ["./shared/*"],
-      "@services/*": ["./services/*"]
+      "@services/*": ["./services/*"],
+      "@stores/*": ["./src/stores/*"]
     }
   },
   "exclude": ["node_modules", "src"]

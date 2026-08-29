@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { subscribe } from "../event";
+import { subscribe } from "@stores/event";
 import type { TFTState } from "@shared/index.ts";
 import { toAction } from "./invoke.ts";
 import { getSnapshot } from "./getSnapshot.ts";

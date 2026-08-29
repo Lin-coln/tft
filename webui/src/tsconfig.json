@@ -29,7 +29,8 @@
 
     // paths
     "paths": {
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@stores/*": ["./stores/*"]
     }
   },
   "include": [".", "../shared"]

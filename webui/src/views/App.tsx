@@ -11,10 +11,9 @@ import {
   HiOutlineSquare2Stack,
   HiOutlineStop,
 } from "react-icons/hi2";
-
-import { connect, useClientId } from "../stores/event";
-import { start, stop, useTFTStore } from "../stores/tft";
-import { useResolvedAppearance } from "../stores/preference";
+import { connect, useClientId } from "@stores/event";
+import { start, stop, useTFTStore } from "@stores/tft";
+import { useResolvedAppearance } from "@stores/preference";
 import { Inspector } from "./Inspector";
 import { Settings } from "./Settings";
 

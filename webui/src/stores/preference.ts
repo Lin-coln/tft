@@ -10,7 +10,6 @@ const store = create<{
   api.subscribe((s) => {
     localStorage.setItem("tft.pref.appearance", s.appearance);
   });
-
   return {
     appearance: (localStorage.getItem("tft.pref.appearance") as Appearance) ?? "auto",
   };

@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import { HiOutlineComputerDesktop, HiOutlineMoon, HiOutlineSun, HiXMark } from "react-icons/hi2";
-
-import { setAppearance, usePreferenceStore } from "../stores/preference";
+import { setAppearance, usePreferenceStore } from "@stores/preference";
 
 interface SettingsProps {
   id: string;
