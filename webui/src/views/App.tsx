@@ -7,13 +7,16 @@ import {
   HiOutlineHome,
   HiOutlinePlay,
   HiOutlineQueueList,
+  HiOutlineCog6Tooth,
   HiOutlineSquare2Stack,
   HiOutlineStop,
 } from "react-icons/hi2";
 
 import { connect, useClientId } from "../stores/event";
 import { start, stop, useTFTStore } from "../stores/tft";
+import { useResolvedAppearance } from "../stores/preference";
 import { Inspector } from "./Inspector";
+import { Settings } from "./Settings";
 
 const navigation = [
   { label: "Overview", icon: HiOutlineHome, active: true },
@@ -25,10 +28,17 @@ export function App() {
   useEffect(() => connect(), []);
   const clientId = useClientId();
   const tft = useTFTStore();
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const appearance = useResolvedAppearance();
+  const [activePanel, setActivePanel] = useState<"inspector" | "settings" | null>(null);
   const [pending, setPending] = useState(false);
   const inspectorId = useId();
+  const settingsId = useId();
   const isRunning = tft.status === "running";
+
+  useEffect(() => {
+    document.documentElement.dataset.appearance = appearance;
+    document.documentElement.style.colorScheme = appearance;
+  }, [appearance]);
 
   async function toggleService() {
     setPending(true);
@@ -133,13 +143,28 @@ export function App() {
           <div className="mx-1 h-5 w-px bg-white/10" />
           <button
             type="button"
+            aria-label="Toggle settings"
+            aria-expanded={activePanel === "settings"}
+            aria-controls={settingsId}
+            onClick={() => setActivePanel((panel) => (panel === "settings" ? null : "settings"))}
+            className={clsx(
+              "grid size-9 place-items-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+              activePanel === "settings"
+                ? "bg-white text-black"
+                : "text-white/35 hover:bg-white/[0.06] hover:text-white/75",
+            )}
+          >
+            <HiOutlineCog6Tooth className="size-[17px]" />
+          </button>
+          <button
+            type="button"
             aria-label="Toggle inspector"
-            aria-expanded={inspectorOpen}
+            aria-expanded={activePanel === "inspector"}
             aria-controls={inspectorId}
-            onClick={() => setInspectorOpen((value) => !value)}
+            onClick={() => setActivePanel((panel) => (panel === "inspector" ? null : "inspector"))}
             className={clsx(
               "flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-              inspectorOpen
+              activePanel === "inspector"
                 ? "bg-white text-black"
                 : "text-white/60 hover:bg-white/[0.06] hover:text-white",
             )}
@@ -150,13 +175,17 @@ export function App() {
         </nav>
       </div>
 
-      <Inspector
-        id={inspectorId}
-        open={inspectorOpen}
-        onClose={() => setInspectorOpen(false)}
-        clientId={clientId}
-        state={tft}
-      />
+      {activePanel === "inspector" && (
+        <Inspector
+          id={inspectorId}
+          onClose={() => setActivePanel(null)}
+          clientId={clientId}
+          state={tft}
+        />
+      )}
+      {activePanel === "settings" && (
+        <Settings id={settingsId} onClose={() => setActivePanel(null)} />
+      )}
     </main>
   );
 }

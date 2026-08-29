@@ -3,21 +3,16 @@ import { HiOutlineCommandLine, HiXMark } from "react-icons/hi2";
 
 interface InspectorProps {
   id: string;
-  open: boolean;
   onClose: () => void;
   clientId: string;
   state: unknown;
 }
 
-export function Inspector({ id, open, onClose, clientId, state }: InspectorProps) {
+export function Inspector({ id, onClose, clientId, state }: InspectorProps) {
   return (
     <aside
       id={id}
-      aria-hidden={!open}
-      className={clsx(
-        "fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[560px] flex-col border-l border-white/[0.12] bg-[#0a0a0a]/98 shadow-[-24px_0_80px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-transform duration-200",
-        open ? "translate-x-0" : "pointer-events-none translate-x-full",
-      )}
+      className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[560px] flex-col border-l border-white/[0.12] bg-[#0a0a0a]/98 shadow-[-8px_0_24px_rgba(0,0,0,0.28)] backdrop-blur-xl"
     >
       <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
         <div className="flex items-center gap-2 text-xs font-medium">
