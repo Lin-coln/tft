@@ -1,8 +1,8 @@
 import { Command } from "commander";
-import { resolve_shop } from "../../src/resolve_shop.ts";
-import { resolve_level } from "../../src/resolve_level.ts";
-import { resolve_economy } from "../../src/resolve_economy.ts";
 import { resolve } from "node:path";
+import { resolve_shop } from "@/src/resolve_shop.ts";
+import { resolve_level } from "@/src/resolve_level.ts";
+import { resolve_economy } from "@/src/resolve_economy.ts";
 
 export const command = new Command("resolve")
   .description("Resolve TFT information from a piped image path")
