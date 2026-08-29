@@ -22,7 +22,9 @@ const SHOP_NAME_PROFILES: AnchorProfile[] = [
   { offsetX: 406, offsetY: -29, width: 93, height: 26 },
 ];
 
-export async function resolve_shop(imageFilenameOrBytes: ImageFilenameOrBytes): Promise<ShopSlot[]> {
+export async function resolve_shop(
+  imageFilenameOrBytes: ImageFilenameOrBytes,
+): Promise<ShopSlot[]> {
   const image = toSharpInput(imageFilenameOrBytes);
   const metadata = await sharp(image).metadata();
   if (!metadata.width || !metadata.height) throw new Error("invalid image");

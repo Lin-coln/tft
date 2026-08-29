@@ -26,7 +26,9 @@ const LEVEL_PROFILE: AnchorProfile = {
   height: 48,
 };
 
-export async function resolve_level(imageFilenameOrBytes: ImageFilenameOrBytes): Promise<LevelInfo> {
+export async function resolve_level(
+  imageFilenameOrBytes: ImageFilenameOrBytes,
+): Promise<LevelInfo> {
   const image = toSharpInput(imageFilenameOrBytes);
   const metadata = await sharp(image).metadata();
   if (!metadata.width || !metadata.height) throw new Error("invalid image");

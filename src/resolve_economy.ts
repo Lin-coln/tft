@@ -32,10 +32,7 @@ export async function resolve_economy(
   const scale = metadata.height / 910;
   const panelImage = await sharp(image).extract(panel).png().toBuffer();
   const valueRectangle = await locateValueRectangle(panelImage, scale);
-  const valueImage = await sharp(panelImage)
-    .extract(valueRectangle)
-    .png()
-    .toBuffer();
+  const valueImage = await sharp(panelImage).extract(valueRectangle).png().toBuffer();
   const result = await recognizeText(valueImage);
   const economy = Number(result.text.match(/\d+/)?.[0]);
   if (!Number.isInteger(economy)) throw new Error(`unable to resolve economy: ${result.text}`);

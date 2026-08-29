@@ -126,9 +126,11 @@ async function recognizeDetectedText(
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const output = (await session.run({
-    x: toRecTensor(data, resizedWidth, inputWidth, inputHeight),
-  })).fetch_name_0;
+  const output = (
+    await session.run({
+      x: toRecTensor(data, resizedWidth, inputWidth, inputHeight),
+    })
+  ).fetch_name_0;
   if (!output) throw new Error("recognition model returned no output");
 
   const logits = output.data as Float32Array;
