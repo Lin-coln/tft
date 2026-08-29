@@ -1,11 +1,18 @@
 {
   "name": "tft",
   "private": true,
+  "author": "lin-coln",
   "bin": {
     "tft": "./bin/tft.ts"
   },
+  "workspaces": {
+    "packages": [
+      "webui"
+    ]
+  },
   "type": "module",
   "scripts": {
+    "webui:dev": "bun --cwd=webui run dev",
     "prepare": "husky",
     "zig:build": "zig build",
     "screenshot": "bun scripts/screenshot.ts",

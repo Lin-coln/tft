@@ -25,12 +25,7 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-
-    // paths
-    "paths": {
-      "@/*": ["./*"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": ["node_modules", "webui", ".venv", "riot-data", "assets"]
+  "exclude": ["node_modules", "src"]
 }
