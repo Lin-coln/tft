@@ -1,4 +1,4 @@
-import { start, stop, store } from "@services/tft.ts";
+import { start, stop, store } from "@services/tft/index.ts";
 import type { TFTState } from "@shared/index.ts";
 
 type Req = Bun.BunRequest<"/api/services/tft">;
