@@ -5,7 +5,6 @@
     "": {
       "name": "tft",
       "devDependencies": {
-        "@types/bun": "latest",
         "husky": "^9.1.7",
         "lint-staged": "^17.0.8",
         "oxfmt": "^0.65.0",
@@ -21,12 +20,18 @@
         "@tft/core": "workspace:*",
         "commander": "^15.0.0",
       },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
     },
     "core": {
       "name": "@tft/core",
       "dependencies": {
         "onnxruntime-node": "^1.29.0",
         "sharp": "^0.35.4",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
       },
     },
     "webui": {
@@ -35,9 +40,11 @@
         "clsx": "^2.1.1",
         "react": "^19.2.6",
         "react-dom": "^19.2.6",
+        "react-icons": "^5.7.0",
         "zustand": "^5.0.15",
       },
       "devDependencies": {
+        "@types/bun": "latest",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "bun-plugin-tailwind": "^0.1.2",
@@ -269,6 +276,8 @@
     "react": ["react@19.2.8", "https://registry.npmmirror.com/react/-/react-19.2.8.tgz", {}, "sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw=="],
 
     "react-dom": ["react-dom@19.2.8", "https://registry.npmmirror.com/react-dom/-/react-dom-19.2.8.tgz", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.8" } }, "sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ=="],
+
+    "react-icons": ["react-icons@5.7.0", "", { "peerDependencies": { "react": "*" } }, "sha512-LBLy340Rzqy6+/yVhZKT3B/QpP1BZaesGqasf09HPOBzRarcDIFH0WwXlXQfE7q7ipxK4MSiC5DIBWURCny6fw=="],
 
     "scheduler": ["scheduler@0.27.0", "https://registry.npmmirror.com/scheduler/-/scheduler-0.27.0.tgz", {}, "sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q=="],
 
