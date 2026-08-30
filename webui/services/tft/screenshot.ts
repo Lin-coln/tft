@@ -2,7 +2,7 @@ import {
   screenshot as captureScreenshot,
   resolve_shop,
   resolve_level,
-  resolve_economy,
+  resolve_currency,
 } from "@tft/core";
 import { store } from "./utils.ts";
 import { deepStrictEqual } from "node:assert";
@@ -11,7 +11,7 @@ export async function screenshot() {
   const bytes = await captureScreenshot();
 
   const level = await resolve_level(bytes).catch(() => null);
-  const currency = await resolve_economy(bytes).catch(() => null);
+  const currency = await resolve_currency(bytes).catch(() => null);
   const shop = await resolve_shop(bytes).catch(() => null);
 
   store.setState((s) => {

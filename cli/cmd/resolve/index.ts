@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { resolve } from "node:path";
-import { resolve_shop, resolve_level, resolve_economy } from "@tft/core";
+import { resolve_shop, resolve_level, resolve_currency } from "@tft/core";
 
 export const command = new Command("resolve")
   .description("Resolve TFT information from a piped image path")
@@ -11,7 +11,7 @@ export const command = new Command("resolve")
     const [shop, level, economy] = await Promise.all([
       resolve_shop(target),
       resolve_level(target),
-      resolve_economy(target),
+      resolve_currency(target),
     ]);
 
     const info = { shop, level, economy };

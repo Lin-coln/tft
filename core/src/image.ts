@@ -16,7 +16,7 @@ export interface AnchorProfile {
   height: number;
 }
 
-export const ROOT = resolve(import.meta.dir, "..");
+export const ROOT = /* @__PURE__ */ resolve(import.meta.dir, "..");
 
 const BASE_HEIGHT = 910;
 

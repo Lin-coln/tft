@@ -15,9 +15,9 @@ interface OcrRuntime {
   characters: string[];
 }
 
-const DET_MODEL_PATH = resolve(ROOT, "assets/models/ppocrv5_mobile_det.onnx");
-const REC_MODEL_PATH = resolve(ROOT, "assets/models/ppocrv5_mobile_rec.onnx");
-const REC_CONFIG_PATH = resolve(ROOT, "assets/models/ppocrv5_mobile_rec.yml");
+const DET_MODEL_PATH = /* @__PURE__ */ resolve(ROOT, "assets/models/ppocrv5_mobile_det.onnx");
+const REC_MODEL_PATH = /* @__PURE__ */ resolve(ROOT, "assets/models/ppocrv5_mobile_rec.onnx");
+const REC_CONFIG_PATH = /* @__PURE__ */ resolve(ROOT, "assets/models/ppocrv5_mobile_rec.yml");
 
 let runtimePromise: Promise<OcrRuntime> | undefined;
 

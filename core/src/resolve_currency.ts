@@ -21,7 +21,7 @@ const ECONOMY_PROFILE: AnchorProfile = {
   height: 46,
 };
 
-export async function resolve_economy(
+export async function resolve_currency(
   imageFilenameOrBytes: ImageFilenameOrBytes,
 ): Promise<EconomyInfo> {
   const image = toSharpInput(imageFilenameOrBytes);
