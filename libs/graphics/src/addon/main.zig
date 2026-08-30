@@ -41,3 +41,13 @@ pub fn list_windows(env: napi.Env) ![]WindowInfo {
 
     return result;
 }
+
+pub fn screenshot(env: napi.Env, window_id: u32) !napi.Val {
+    const allocator = env.allocator();
+    const bytes = try window.screenshot(allocator, window_id);
+    defer allocator.free(bytes);
+
+    const buffer = try env.createBuffer(bytes.len);
+    @memcpy(buffer.data, bytes);
+    return buffer.val;
+}

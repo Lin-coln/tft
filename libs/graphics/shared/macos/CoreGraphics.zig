@@ -8,6 +8,8 @@ pub const CGColor = opaque {};
 pub const CGColorRef = *CGColor;
 pub const CGColorSpace = opaque {};
 pub const CGColorSpaceRef = *CGColorSpace;
+pub const CGImage = opaque {};
+pub const CGImageRef = *CGImage;
 
 pub const CGPoint = extern struct { x: CGFloat, y: CGFloat };
 pub const CGSize = extern struct { width: CGFloat, height: CGFloat };

@@ -16,5 +16,11 @@ pub fn create_mod_macos(b: *Build, target: Target, optimize: OptimizeMode) *Modu
     });
     mod.linkFramework("CoreFoundation", .{});
     mod.linkFramework("CoreGraphics", .{});
+    mod.linkFramework("CoreImage", .{});
+    mod.linkFramework("CoreMedia", .{});
+    mod.linkFramework("CoreVideo", .{});
+    mod.linkFramework("ImageIO", .{});
+    mod.linkFramework("ScreenCaptureKit", .{});
+    mod.linkSystemLibrary("objc", .{});
     return mod;
 }

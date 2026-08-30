@@ -18,6 +18,9 @@ pub const CFString = opaque {};
 pub const CFStringRef = *const CFString;
 pub const CFNumber = opaque {};
 pub const CFNumberRef = *const CFNumber;
+pub const CFData = opaque {};
+pub const CFDataRef = *const CFData;
+pub const CFMutableDataRef = *CFData;
 pub const CFDictionaryKeyCallBacks = opaque {};
 pub const CFDictionaryValueCallBacks = opaque {};
 
@@ -39,3 +42,7 @@ pub extern fn CFNumberGetValue(number: CFNumberRef, number_type: CFNumberType, v
 pub extern fn CFStringGetLength(value: CFStringRef) callconv(.c) CFIndex;
 pub extern fn CFStringGetMaximumSizeForEncoding(length: CFIndex, encoding: CFStringEncoding) callconv(.c) CFIndex;
 pub extern fn CFStringGetCString(value: CFStringRef, buffer: [*]u8, size: CFIndex, encoding: CFStringEncoding) callconv(.c) Boolean;
+pub extern fn CFStringCreateWithCString(allocator: ?CFAllocatorRef, string: [*:0]const u8, encoding: CFStringEncoding) callconv(.c) ?CFStringRef;
+pub extern fn CFDataCreateMutable(allocator: ?CFAllocatorRef, capacity: CFIndex) callconv(.c) ?CFMutableDataRef;
+pub extern fn CFDataGetLength(data: CFDataRef) callconv(.c) CFIndex;
+pub extern fn CFDataGetBytePtr(data: CFDataRef) callconv(.c) [*]const u8;
