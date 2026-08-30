@@ -5,6 +5,7 @@ import type { TFTState } from "@shared/index.ts";
 
 const getState = /* @__PURE__ */ createHMR<TFTState>("service/tft", () => ({
   status: "idle",
+  window_id: -1,
   level: {
     current: -1,
     confidence: 1,

@@ -1,9 +1,9 @@
-import { screenshot, start, stop, store } from "@services/tft/index.ts";
+import { listWindows, screenshot, setWindowId, start, stop, store } from "@services/tft/index.ts";
 import type { TFTState } from "@shared/index.ts";
 
 type Req = Bun.BunRequest<"/api/services/tft">;
 
-const actions: TFTState.Actions = { start, stop, screenshot };
+const actions: TFTState.Actions = { start, stop, screenshot, listWindows, setWindowId };
 
 export const handleServiceTFT = {
   GET(req: Req) {

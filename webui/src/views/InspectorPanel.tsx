@@ -1,8 +1,10 @@
+import { useEffect, useState, type ChangeEvent } from "react";
 import { cx } from "class-variance-authority";
 import { HiOutlineCommandLine } from "react-icons/hi2";
+import type { Window } from "@tft/graphics";
 import { setActivePanel } from "@stores/app";
 import { useClientId } from "@stores/event";
-import { useTFTStore } from "@stores/tft";
+import { listWindows, setWindowId, useTFTStore } from "@stores/tft";
 import { SidePanel } from "@components/SidePanel";
 
 export function InspectorPanel() {
@@ -18,6 +20,7 @@ export function InspectorPanel() {
       <div className="space-y-5 p-4">
         <InspectorRow label="Connection" value="Connected" status />
         <InspectorRow label="Client ID" value={clientId} mono />
+        <WindowListSection />
         <div>
           <div className="mb-2 text-[10px] uppercase tracking-[0.15em] text-black/40 dark:text-white/30">
             Current snapshot
@@ -29,6 +32,77 @@ export function InspectorPanel() {
       </div>
     </SidePanel>
   );
+}
+
+function WindowListSection() {
+  const windowId = useTFTStore((state) => state.window_id);
+  const [windows, setWindows] = useState<Window[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let disposed = false;
+
+    void listWindows()
+      .then((result) => {
+        if (!disposed) setWindows(result);
+      })
+      .catch((error) => {
+        if (!disposed) setError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  return (
+    <section>
+      <label
+        htmlFor="target-window"
+        className="mb-2 block text-[10px] uppercase tracking-[0.15em] text-black/40 dark:text-white/30"
+      >
+        Target window
+      </label>
+      <select
+        id="target-window"
+        value={windowId === -1 ? "" : windowId}
+        disabled={pending || windows === null || windows.length === 0}
+        onChange={selectWindow}
+        className={cx(
+          "h-10 w-full rounded-lg border px-3",
+          "border-black/10 bg-white text-xs text-black/70 dark:border-white/10 dark:bg-black dark:text-white/70",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50 dark:focus-visible:ring-white/50",
+          "disabled:cursor-wait disabled:opacity-50",
+        )}
+      >
+        <option value="" disabled hidden />
+        {windows?.map((window) => (
+          <option key={window.id} value={window.id}>
+            {window.owner_name || "Unknown owner"} — {window.name || "Untitled window"} (#
+            {window.id})
+          </option>
+        ))}
+      </select>
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+
+  async function selectWindow(event: ChangeEvent<HTMLSelectElement>) {
+    setPending(true);
+    setError(null);
+    try {
+      await setWindowId(Number(event.currentTarget.value));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPending(false);
+    }
+  }
 }
 
 function InspectorRow({
