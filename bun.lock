@@ -34,6 +34,12 @@
         "@types/bun": "latest",
       },
     },
+    "libs/graphics": {
+      "name": "@tft/graphics",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "webui": {
       "name": "webui",
       "dependencies": {
@@ -173,6 +179,8 @@
     "@oxfmt/binding-win32-x64-msvc": ["@oxfmt/binding-win32-x64-msvc@0.65.0", "http://registry.npm.taobao.org/@oxfmt/binding-win32-x64-msvc/-/binding-win32-x64-msvc-0.65.0.tgz", { "os": "win32", "cpu": "x64" }, "sha512-higu9cWEO6XXFzATD1jf0mCK34rNfN2H9JrJie7QB1IhleVpTh0QlLH9Ip2C1H/Nd5n0v5pvRtC+5R0uE4HpVg=="],
 
     "@tft/core": ["@tft/core@workspace:core"],
+
+    "@tft/graphics": ["@tft/graphics@workspace:libs/graphics"],
 
     "@types/bun": ["@types/bun@1.4.0", "http://registry.npm.taobao.org/@types/bun/-/bun-1.4.0.tgz", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
 

@@ -1,0 +1,18 @@
+{
+  "name": "@tft/graphics",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "zig:build": "zig build",
+    "zig:test": "zig build test",
+    "bun:test": "bun run zig:build && bun test test/*.test.ts",
+    "test": "bun run zig:test && bun run bun:test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

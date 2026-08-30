@@ -6,7 +6,8 @@
     "packages": [
       "webui",
       "cli",
-      "core"
+      "core",
+      "libs/*"
     ]
   },
   "type": "module",
