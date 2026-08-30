@@ -58,7 +58,7 @@ export function Screenshot() {
           <img
             src={url}
             alt="Latest TFT board screenshot"
-            className="h-full w-full object-contain"
+            className="absolute inset-0 block size-full object-contain"
           />
         ) : (
           <div className="flex flex-col items-center px-6 py-16 text-center">

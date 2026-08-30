@@ -1,14 +1,15 @@
-import {
-  screenshot as captureScreenshot,
-  resolve_shop,
-  resolve_level,
-  resolve_currency,
-} from "@tft/core";
+import { resolve_shop, resolve_level, resolve_currency } from "@tft/core";
+import { screenshot as captureScreenshot } from "@tft/graphics";
 import { store } from "./utils.ts";
 import { deepStrictEqual } from "node:assert";
 
 export async function screenshot() {
-  const bytes = await captureScreenshot();
+  const window_id = store.getState().window_id;
+  if (window_id < 0) {
+    throw new Error("No window selected");
+  }
+
+  const bytes = captureScreenshot(window_id);
 
   const level = await resolve_level(bytes).catch(() => null);
   const currency = await resolve_currency(bytes).catch(() => null);
