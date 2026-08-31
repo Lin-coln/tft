@@ -14,6 +14,7 @@ pub fn create_mod_macos(b: *Build, target: Target, optimize: OptimizeMode) *Modu
         .target = target,
         .optimize = optimize,
     });
+    mod.linkFramework("AppKit", .{});
     mod.linkFramework("CoreFoundation", .{});
     mod.linkFramework("CoreGraphics", .{});
     mod.linkFramework("CoreImage", .{});

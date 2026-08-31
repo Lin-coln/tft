@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) !void {
 
     const mod_calc = create_mod_calc(b, target, optimize);
 
-    const mod_window = create_mod_window(b, target, optimize);
+    const mod_window = create_mod_window(b, target, optimize, mod_macos);
     mod_window.addImport("macos", mod_macos);
 
     add_addon(b, napi_dep, target, optimize, mod_calc, mod_window);

@@ -5,11 +5,27 @@ const OptimizeMode = std.builtin.OptimizeMode;
 const Module = std.Build.Module;
 const Step = std.Build.Step;
 
-pub fn create_mod_window(b: *Build, target: Target, optimize: OptimizeMode) *Module {
+pub fn create_mod_window(
+    b: *Build,
+    target: Target,
+    optimize: OptimizeMode,
+    macos: *Module,
+) *Module {
+    const objc = b.dependency("zig_objc", .{
+        .target = target,
+        .optimize = optimize,
+        .@"add-paths" = false,
+    }).module("objc");
+
     return b.createModule(.{
         .root_source_file = b.path("src/window/main.zig"),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "objc", .module = objc },
+            .{ .name = "macos", .module = macos },
+        },
     });
 }
 

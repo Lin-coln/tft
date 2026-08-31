@@ -26,6 +26,8 @@ const WindowInfo = struct {
 };
 
 pub fn list_windows(env: napi.Env) ![]WindowInfo {
+    try window.ensure_initialized();
+
     const allocator = env.allocator();
     const windows = try window.list_windows(allocator);
     defer allocator.free(windows);
@@ -43,6 +45,9 @@ pub fn list_windows(env: napi.Env) ![]WindowInfo {
 }
 
 pub fn screenshot(env: napi.Env, window_id: u32) !napi.Val {
+    if (window_id == 0) return error.InvalidWindowId;
+    try window.ensure_initialized();
+
     const allocator = env.allocator();
     const bytes = try window.screenshot(allocator, window_id);
     defer allocator.free(bytes);
