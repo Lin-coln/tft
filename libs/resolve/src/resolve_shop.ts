@@ -15,11 +15,11 @@ export interface ShopSlot {
 }
 
 const SHOP_NAME_PROFILES: AnchorProfile[] = [
-  { offsetX: -300, offsetY: -29, width: 91, height: 26 },
-  { offsetX: -120, offsetY: -29, width: 91, height: 24 },
-  { offsetX: 53, offsetY: -30, width: 88, height: 27 },
-  { offsetX: 229, offsetY: -28, width: 86, height: 27 },
-  { offsetX: 406, offsetY: -29, width: 93, height: 26 },
+  { offsetX: -300, offsetY: -37, width: 159, height: 26 },
+  { offsetX: -120, offsetY: -37, width: 114, height: 24 },
+  { offsetX: 53, offsetY: -41, width: 110, height: 27 },
+  { offsetX: 229, offsetY: -36, width: 129, height: 27 },
+  { offsetX: 406, offsetY: -37, width: 116, height: 26 },
 ];
 
 export async function resolve_shop(
@@ -35,7 +35,11 @@ export async function resolve_shop(
       const slotImage = await sharp(image).extract(rectangle).png().toBuffer();
       const result = await recognizeText(slotImage);
 
-      return { slot: index + 1, name: result.text, confidence: result.confidence };
+      return {
+        slot: index + 1,
+        name: result.text.replace(/^\d+\s*/, ""),
+        confidence: result.confidence,
+      };
     }),
   );
 }

@@ -18,14 +18,21 @@ export interface AnchorProfile {
 
 export const ROOT = /* @__PURE__ */ resolve(import.meta.dir, "..");
 
+const BASE_WIDTH = 1600;
 const BASE_HEIGHT = 910;
+
+export function calculateScale(imageWidth: number, imageHeight: number): number {
+  const expectedContentHeight = (imageWidth * BASE_HEIGHT) / BASE_WIDTH;
+  const headHeight = Math.max(0, imageHeight - expectedContentHeight);
+  return (imageHeight - headHeight) / BASE_HEIGHT;
+}
 
 export function calculateRectangle(
   profile: AnchorProfile,
   imageWidth: number,
   imageHeight: number,
 ): Rectangle {
-  const scale = imageHeight / BASE_HEIGHT;
+  const scale = calculateScale(imageWidth, imageHeight);
   const width = Math.max(1, Math.round(profile.width * scale));
   const height = Math.max(1, Math.round(profile.height * scale));
   const anchorX = imageWidth / 2;
