@@ -6,8 +6,8 @@
     "dev": "bun run --hot index.ts"
   },
   "dependencies": {
-    "@tft/core": "workspace:*",
     "@tft/graphics": "workspace:*",
+    "@tft/resolve": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

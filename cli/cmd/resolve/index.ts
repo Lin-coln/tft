@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { resolve } from "node:path";
-import { resolve_shop, resolve_level, resolve_currency } from "@tft/core";
+import { resolve_shop, resolve_level, resolve_currency } from "@tft/resolve";
 
 export const command = new Command("resolve")
   .description("Resolve TFT information from a piped image path")

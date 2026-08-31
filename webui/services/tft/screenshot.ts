@@ -1,4 +1,4 @@
-import { resolve_shop, resolve_level, resolve_currency } from "@tft/core";
+import { resolve_shop, resolve_level, resolve_currency } from "@tft/resolve";
 import { Screenshot } from "@tft/graphics";
 import { store } from "./utils.ts";
 import { deepStrictEqual } from "node:assert";

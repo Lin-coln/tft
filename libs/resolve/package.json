@@ -1,0 +1,20 @@
+{
+  "name": "@tft/resolve",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "fetch:assets": "bun run scripts/fetch_tft_data.ts && bun scripts/fetch_models.ts",
+    "resolve_info": "bun run scripts/resolve_info.ts"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.29.0",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

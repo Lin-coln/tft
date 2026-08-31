@@ -26,16 +26,22 @@
     },
     "core": {
       "name": "@tft/core",
-      "dependencies": {
-        "onnxruntime-node": "^1.29.0",
-        "sharp": "^0.35.4",
-      },
       "devDependencies": {
         "@types/bun": "latest",
       },
     },
     "libs/graphics": {
       "name": "@tft/graphics",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
+    "libs/resolve": {
+      "name": "@tft/resolve",
+      "dependencies": {
+        "onnxruntime-node": "^1.29.0",
+        "sharp": "^0.35.4",
+      },
       "devDependencies": {
         "@types/bun": "latest",
       },
@@ -182,6 +188,8 @@
     "@tft/core": ["@tft/core@workspace:core"],
 
     "@tft/graphics": ["@tft/graphics@workspace:libs/graphics"],
+
+    "@tft/resolve": ["@tft/resolve@workspace:libs/resolve"],
 
     "@types/bun": ["@types/bun@1.4.0", "http://registry.npm.taobao.org/@types/bun/-/bun-1.4.0.tgz", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
 
