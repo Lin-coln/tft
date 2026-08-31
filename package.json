@@ -6,7 +6,6 @@
     "packages": [
       "webui",
       "cli",
-      "core",
       "libs/*"
     ]
   },
