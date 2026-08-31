@@ -23,3 +23,7 @@ pub fn initWithDesktopIndependentWindow(window: objc.Object) !Self {
 pub fn deinit(self: Self) void {
     self.obj.release();
 }
+
+pub fn getPointPixelScale(self: Self) f32 {
+    return self.obj.msgSend(f32, "pointPixelScale", .{});
+}

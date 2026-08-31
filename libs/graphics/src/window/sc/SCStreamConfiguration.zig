@@ -6,6 +6,7 @@ const utils = @import("utils.zig");
 const cm = macos.CoreMedia;
 const cg = macos.CoreGraphics;
 const cf = macos.CoreFoundation;
+const sc = macos.ScreenCaptureKit;
 
 const dispatch = std.c.dispatch;
 
@@ -64,6 +65,10 @@ pub fn setColorSpaceName(self: Self, name: cf.CFStringRef) void {
 
 pub fn setShowsCursor(self: Self, show: bool) void {
     self.obj.msgSend(void, "setShowsCursor:", .{utils.objc_bool(show)});
+}
+
+pub fn setCaptureResolution(self: Self, resolution: sc.SCCaptureResolutionType) void {
+    self.obj.msgSend(void, "setCaptureResolution:", .{resolution});
 }
 
 pub fn setBackgroundColor(self: Self, color: cg.CGColorRef) void {

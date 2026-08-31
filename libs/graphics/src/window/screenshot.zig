@@ -12,6 +12,7 @@ const cg = macos.CoreGraphics;
 const cm = macos.CoreMedia;
 const cv = macos.CoreVideo;
 const image_io = macos.ImageIO;
+const sc = macos.ScreenCaptureKit;
 
 pub fn screenshot(allocator: std.mem.Allocator, window_id: u32) ![]u8 {
     if (window_id == cg.kCGNullWindowID) return error.InvalidWindowId;
@@ -26,16 +27,18 @@ pub fn screenshot(allocator: std.mem.Allocator, window_id: u32) ![]u8 {
     const config = try SCStreamConfiguration.init();
     defer config.deinit();
 
+    const filter = try SCContentFilter.initWithDesktopIndependentWindow(target);
+    defer filter.deinit();
+
     const frame = target.msgSend(cg.CGRect, "frame", .{});
-    config.setWidth(initial_dimension(frame.size.width));
-    config.setHeight(initial_dimension(frame.size.height));
+    const point_pixel_scale = filter.getPointPixelScale();
+    config.setWidth(pixel_dimension(frame.size.width, point_pixel_scale));
+    config.setHeight(pixel_dimension(frame.size.height, point_pixel_scale));
+    config.setCaptureResolution(sc.SCCaptureResolutionBest);
     // config.setQueueDepth(8);
     config.setPixelFormat(cv.kCVPixelFormatType_ARGB2101010LEPacked);
     config.setColorSpaceName(cg.kCGColorSpaceDisplayP3);
     config.setShowsCursor(false);
-
-    const filter = try SCContentFilter.initWithDesktopIndependentWindow(target);
-    defer filter.deinit();
 
     const buffer = retainSampleBuffer(filter.obj, config.obj) orelse
         return error.ScreenCaptureKitUnavailable;
@@ -112,8 +115,16 @@ fn find_window(content: objc.Object, window_id: u32) ?objc.Object {
     return null;
 }
 
-fn initial_dimension(points: f64) u32 {
+fn pixel_dimension(points: f64, point_pixel_scale: f32) u32 {
     if (!std.math.isFinite(points) or points < 1) return 1;
-    if (points >= std.math.maxInt(u32)) return std.math.maxInt(u32);
-    return @intFromFloat(@ceil(points));
+    if (!std.math.isFinite(point_pixel_scale) or point_pixel_scale <= 0) return 1;
+
+    const pixels = @ceil(points * @as(f64, point_pixel_scale));
+    if (pixels >= std.math.maxInt(u32)) return std.math.maxInt(u32);
+    return @intFromFloat(pixels);
+}
+
+test "pixel dimension applies the Retina scale" {
+    try std.testing.expectEqual(@as(u32, 200), pixel_dimension(100, 2));
+    try std.testing.expectEqual(@as(u32, 150), pixel_dimension(100, 1.5));
 }
