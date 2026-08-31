@@ -4,6 +4,6 @@ comptime {
     napi.module(@This());
 }
 
-pub const list_windows = @import("list_windows.zig").list_windows;
+pub const listWindows = @import("listWindows.zig").listWindows;
 
 pub const Screenshot = napi.class("Screenshot", @import("Screenshot.zig"));

@@ -15,7 +15,7 @@ const WindowInfo = struct {
   }
 };
 
-pub fn list_windows(env: napi.Env) ![]WindowInfo {
+pub fn listWindows(env: napi.Env) ![]WindowInfo {
   try window.ensure_initialized();
 
   const allocator = env.allocator();

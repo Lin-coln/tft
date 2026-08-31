@@ -1,48 +1,45 @@
 const std = @import("std");
 const macos = @import("macos");
+const objc = @import("objc");
 const cg = macos.CoreGraphics;
-const cf = macos.CoreFoundation;
-const dict = @import("dict.zig");
+const retainShareableContent = @import("sc/retainShareableContent.zig").retainShareableContent;
 const Window = @import("Window.zig");
 
 pub fn list_windows(allocator: std.mem.Allocator) ![]Window {
-    const opts =
-        cg.kCGWindowListOptionAll |
-        cg.kCGWindowListExcludeDesktopElements;
+    const content = retainShareableContent() orelse
+        return error.ScreenCaptureKitUnavailable;
+    defer content.release();
 
-    const list = try create_window_list(allocator, opts);
-    errdefer allocator.free(list);
+    const shareable_windows = content.msgSend(objc.Object, "windows", .{});
+    if (shareable_windows.value == null) return error.ScreenCaptureKitUnavailable;
 
-    var filtered_len: usize = 0;
-    for (list) |candidate| {
+    var list: std.ArrayList(Window) = .empty;
+    errdefer list.deinit(allocator);
+
+    var iterator = shareable_windows.iterate();
+    while (iterator.next()) |shareable_window| {
+        const id = shareable_window.msgSend(u32, "windowID", .{});
+        if (id == cg.kCGNullWindowID) continue;
+
+        const candidate = Window.init(id);
         if (candidate.get_layer() != 0) continue;
-        list[filtered_len] = candidate;
-        filtered_len += 1;
+        if (!has_non_empty_names(shareable_window)) continue;
+        try list.append(allocator, candidate);
     }
 
-    if (filtered_len == list.len) return list;
-    return allocator.realloc(list, filtered_len);
+    return list.toOwnedSlice(allocator);
 }
 
-fn create_window_list(allocator: std.mem.Allocator, opts: cg.CGWindowListOption) ![]Window {
-    const window_info = cg.CGWindowListCopyWindowInfo(opts, cg.kCGNullWindowID) orelse
-        return error.WindowListUnavailable;
-    defer cf.CFRelease(window_info);
+fn has_non_empty_names(window: objc.Object) bool {
+    const application = window.msgSend(objc.Object, "owningApplication", .{});
+    if (application.value == null) return false;
 
-    var windows: std.ArrayList(Window) = .empty;
-    errdefer windows.deinit(allocator);
+    const application_name = application.msgSend(objc.Object, "applicationName", .{});
+    if (application_name.value == null or application_name.msgSend(usize, "length", .{}) == 0)
+        return false;
 
-    const count = cf.CFArrayGetCount(window_info);
-    var index: cf.CFIndex = 0;
-    while (index < count) : (index += 1) {
-        const raw_value = cf.CFArrayGetValueAtIndex(window_info, index) orelse continue;
-        const ref: cf.CFDictionaryRef = @ptrCast(raw_value);
-
-        const id = dict.get_u32(ref, cg.kCGWindowNumber) orelse continue;
-        try windows.append(allocator, .{ .id = id });
-    }
-
-    return windows.toOwnedSlice(allocator);
+    const title = window.msgSend(objc.Object, "title", .{});
+    return title.value != null and title.msgSend(usize, "length", .{}) != 0;
 }
 
 test "list windows" {
