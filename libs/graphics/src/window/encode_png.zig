@@ -2,52 +2,13 @@ const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
 
-const SCContentFilter = @import("sc/SCContentFilter.zig");
-const SCStreamConfiguration = @import("sc/SCStreamConfiguration.zig");
-const retainShareableContent = @import("sc/retainShareableContent.zig").retainShareableContent;
-const retainSampleBuffer = @import("sc/retainSampleBuffer.zig").retainSampleBuffer;
-
 const cf = macos.CoreFoundation;
 const cg = macos.CoreGraphics;
 const cm = macos.CoreMedia;
 const cv = macos.CoreVideo;
 const image_io = macos.ImageIO;
-const sc = macos.ScreenCaptureKit;
 
-pub fn screenshot(allocator: std.mem.Allocator, window_id: u32) ![]u8 {
-    if (window_id == cg.kCGNullWindowID) return error.InvalidWindowId;
-    if (!cg.CGPreflightScreenCaptureAccess()) return error.ScreenCaptureKitUnavailable;
-
-    const content = retainShareableContent() orelse return error.ScreenCaptureKitUnavailable;
-    defer content.release();
-
-    const target = find_window(content, window_id) orelse return error.ScreenshotTargetNotFound;
-    defer target.release();
-
-    const config = try SCStreamConfiguration.init();
-    defer config.deinit();
-
-    const filter = try SCContentFilter.initWithDesktopIndependentWindow(target);
-    defer filter.deinit();
-
-    const frame = target.msgSend(cg.CGRect, "frame", .{});
-    const point_pixel_scale = filter.getPointPixelScale();
-    config.setWidth(pixel_dimension(frame.size.width, point_pixel_scale));
-    config.setHeight(pixel_dimension(frame.size.height, point_pixel_scale));
-    config.setCaptureResolution(sc.SCCaptureResolutionBest);
-    // config.setQueueDepth(8);
-    config.setPixelFormat(cv.kCVPixelFormatType_ARGB2101010LEPacked);
-    config.setColorSpaceName(cg.kCGColorSpaceDisplayP3);
-    config.setShowsCursor(false);
-
-    const buffer = retainSampleBuffer(filter.obj, config.obj) orelse
-        return error.ScreenCaptureKitUnavailable;
-    defer buffer.release();
-
-    return encode_png(allocator, buffer);
-}
-
-fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u8 {
+pub fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u8 {
     const sample_buffer_ref: cm.CMSampleBufferRef = @ptrCast(@alignCast(sample_buffer.value));
     const pixel_buffer = cm.CMSampleBufferGetImageBuffer(sample_buffer_ref) orelse
         return error.SampleBufferHasNoImage;
@@ -100,31 +61,4 @@ fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u8 {
     errdefer allocator.free(encoded);
     @memcpy(encoded, cf.CFDataGetBytePtr(data)[0..length]);
     return encoded;
-}
-
-fn find_window(content: objc.Object, window_id: u32) ?objc.Object {
-    const windows = content.msgSend(objc.Object, "windows", .{});
-    if (windows.value == null) return null;
-
-    var iterator = windows.iterate();
-    while (iterator.next()) |candidate| {
-        if (candidate.msgSend(u32, "windowID", .{}) != window_id) continue;
-        return candidate.retain();
-    }
-
-    return null;
-}
-
-fn pixel_dimension(points: f64, point_pixel_scale: f32) u32 {
-    if (!std.math.isFinite(points) or points < 1) return 1;
-    if (!std.math.isFinite(point_pixel_scale) or point_pixel_scale <= 0) return 1;
-
-    const pixels = @ceil(points * @as(f64, point_pixel_scale));
-    if (pixels >= std.math.maxInt(u32)) return std.math.maxInt(u32);
-    return @intFromFloat(pixels);
-}
-
-test "pixel dimension applies the Retina scale" {
-    try std.testing.expectEqual(@as(u32, 200), pixel_dimension(100, 2));
-    try std.testing.expectEqual(@as(u32, 150), pixel_dimension(100, 1.5));
 }

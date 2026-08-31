@@ -1,2 +1,1 @@
-export type * from "./calc.ts";
-export type * from "./window.ts";
+export type * from "../src/window.ts";

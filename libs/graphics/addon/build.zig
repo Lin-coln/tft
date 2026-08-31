@@ -11,16 +11,14 @@ pub fn add_addon(
     napi_dep: *Dependency,
     target: Target,
     optimize: OptimizeMode,
-    calc: *Module,
     window: *Module,
 ) void {
     napi_zig.addLib(b, napi_dep, .{
         .name = "addon",
-        .root = b.path("src/addon/main.zig"),
+        .root = b.path("addon/main.zig"),
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{ .name = "calc", .module = calc },
             .{ .name = "window", .module = window },
         },
     });
