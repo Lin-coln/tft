@@ -6,7 +6,25 @@ const dict = @import("dict.zig");
 const Window = @import("Window.zig");
 
 pub fn list_windows(allocator: std.mem.Allocator) ![]Window {
-    const opts = cg.kCGWindowListOptionAll;
+    const opts =
+        cg.kCGWindowListOptionAll |
+        cg.kCGWindowListExcludeDesktopElements;
+
+    const list = try create_window_list(allocator, opts);
+    errdefer allocator.free(list);
+
+    var filtered_len: usize = 0;
+    for (list) |candidate| {
+        if (candidate.get_layer() != 0) continue;
+        list[filtered_len] = candidate;
+        filtered_len += 1;
+    }
+
+    if (filtered_len == list.len) return list;
+    return allocator.realloc(list, filtered_len);
+}
+
+fn create_window_list(allocator: std.mem.Allocator, opts: cg.CGWindowListOption) ![]Window {
     const window_info = cg.CGWindowListCopyWindowInfo(opts, cg.kCGNullWindowID) orelse
         return error.WindowListUnavailable;
     defer cf.CFRelease(window_info);
@@ -34,6 +52,7 @@ test "list windows" {
 
     for (windows) |window| {
         try std.testing.expect(window.id != 0);
+        try std.testing.expectEqual(@as(?i32, 0), window.get_layer());
     }
 
     if (windows.len != 0) {

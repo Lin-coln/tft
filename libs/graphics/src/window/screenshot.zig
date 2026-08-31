@@ -30,8 +30,8 @@ pub fn screenshot(allocator: std.mem.Allocator, window_id: u32) ![]u8 {
     config.setWidth(initial_dimension(frame.size.width));
     config.setHeight(initial_dimension(frame.size.height));
     // config.setQueueDepth(8);
-    // config.setPixelFormat(cv.kCVPixelFormatType_ARGB2101010LEPacked);
-    // config.setColorSpaceName(cg.kCGColorSpaceDisplayP3);
+    config.setPixelFormat(cv.kCVPixelFormatType_ARGB2101010LEPacked);
+    config.setColorSpaceName(cg.kCGColorSpaceDisplayP3);
     config.setShowsCursor(false);
 
     const filter = try SCContentFilter.initWithDesktopIndependentWindow(target);
