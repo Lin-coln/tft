@@ -8,7 +8,15 @@ const cm = macos.CoreMedia;
 const cv = macos.CoreVideo;
 const image_io = macos.ImageIO;
 
-pub fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u8 {
+pub fn encode_png(
+    allocator: std.mem.Allocator,
+    ci_context: objc.Object,
+    sample_buffer: objc.Object,
+) ![]u8 {
+    const io = std.Io.Threaded.global_single_threaded.io();
+    var perf = @import("Perf.zig").init("encode_png", io);
+    defer perf.deinit();
+
     const sample_buffer_ref: cm.CMSampleBufferRef = @ptrCast(@alignCast(sample_buffer.value));
     const pixel_buffer = cm.CMSampleBufferGetImageBuffer(sample_buffer_ref) orelse
         return error.SampleBufferHasNoImage;
@@ -20,13 +28,6 @@ pub fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u
     if (initialized_image.value == null) return error.CoreImageUnavailable;
     defer initialized_image.release();
 
-    const ci_context_class = objc.getClass("CIContext") orelse return error.CoreImageUnavailable;
-    const ci_context = ci_context_class.msgSend(objc.Object, "alloc", .{});
-    if (ci_context.value == null) return error.CoreImageUnavailable;
-    const initialized_context = ci_context.msgSend(objc.Object, "initWithOptions:", .{@as(objc.c.id, null)});
-    if (initialized_context.value == null) return error.CoreImageUnavailable;
-    defer initialized_context.release();
-
     const bounds = cg.CGRect{
         .origin = .{ .x = 0, .y = 0 },
         .size = .{
@@ -34,7 +35,7 @@ pub fn encode_png(allocator: std.mem.Allocator, sample_buffer: objc.Object) ![]u
             .height = @floatFromInt(cv.CVPixelBufferGetHeight(pixel_buffer)),
         },
     };
-    const image = initialized_context.msgSend(?cg.CGImageRef, "createCGImage:fromRect:", .{
+    const image = ci_context.msgSend(?cg.CGImageRef, "createCGImage:fromRect:", .{
         initialized_image,
         bounds,
     }) orelse return error.CGImageCreationFailed;

@@ -30,7 +30,7 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
     perf.lap("sample");
 
     const allocator = env.allocator();
-    const bytes = try window.encode_png(allocator, buffer);
+    const bytes = try window.encode_png(allocator, self.native.ci_context, buffer);
     defer allocator.free(bytes);
     perf.lap("encode_png");
 

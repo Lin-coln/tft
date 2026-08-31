@@ -18,6 +18,7 @@ const Self = @This();
 
 window_id: u32,
 shareable_content: objc.Object,
+ci_context: objc.Object,
 
 pub fn init(window_id: u32) !Self {
     if (window_id == cg.kCGNullWindowID) return error.InvalidWindowId;
@@ -26,13 +27,18 @@ pub fn init(window_id: u32) !Self {
     const content = retainShareableContent() orelse return error.ScreenCaptureKitUnavailable;
     errdefer content.release();
 
+    const ci_context = try init_ci_context();
+    errdefer ci_context.release();
+
     return .{
         .window_id = window_id,
         .shareable_content = content,
+        .ci_context = ci_context,
     };
 }
 
 pub fn deinit(self: Self) void {
+    self.ci_context.release();
     self.shareable_content.release();
 }
 
@@ -60,6 +66,16 @@ pub fn sample(self: Self) !objc.Object {
 
     return retainSampleBuffer(filter.obj, config.obj) orelse
         return error.ScreenCaptureKitUnavailable;
+}
+
+fn init_ci_context() !objc.Object {
+    const class = objc.getClass("CIContext") orelse return error.CoreImageUnavailable;
+    const allocated = class.msgSend(objc.Object, "alloc", .{});
+    if (allocated.value == null) return error.CoreImageUnavailable;
+
+    const context = allocated.msgSend(objc.Object, "initWithOptions:", .{@as(objc.c.id, null)});
+    if (context.value == null) return error.CoreImageUnavailable;
+    return context;
 }
 
 fn find_window(shareable_content: objc.Object, window_id: u32) ?objc.Object {
