@@ -17,7 +17,7 @@ pub fn create_mod_window(
         .@"add-paths" = false,
     }).module("objc");
 
-    return b.createModule(.{
+    const mod = b.createModule(.{
         .root_source_file = b.path("src/window/main.zig"),
         .target = target,
         .optimize = optimize,
@@ -27,6 +27,18 @@ pub fn create_mod_window(
             .{ .name = "macos", .module = macos },
         },
     });
+
+    mod.linkFramework("AppKit", .{});
+    mod.linkFramework("CoreFoundation", .{});
+    mod.linkFramework("CoreGraphics", .{});
+    mod.linkFramework("CoreImage", .{});
+    mod.linkFramework("CoreMedia", .{});
+    mod.linkFramework("CoreVideo", .{});
+    mod.linkFramework("ImageIO", .{});
+    mod.linkFramework("ScreenCaptureKit", .{});
+    mod.linkSystemLibrary("objc", .{});
+
+    return mod;
 }
 
 pub fn setup_test(b: *Build, test_step: *Step, module: *Module) void {

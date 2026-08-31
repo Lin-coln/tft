@@ -9,19 +9,9 @@ pub fn create_mod_macos(b: *Build, target: Target, optimize: OptimizeMode) *Modu
         @panic("macos requires a macOS target");
     }
 
-    const mod = b.createModule(.{
+    return b.createModule(.{
         .root_source_file = b.path("shared/macos/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    mod.linkFramework("AppKit", .{});
-    mod.linkFramework("CoreFoundation", .{});
-    mod.linkFramework("CoreGraphics", .{});
-    mod.linkFramework("CoreImage", .{});
-    mod.linkFramework("CoreMedia", .{});
-    mod.linkFramework("CoreVideo", .{});
-    mod.linkFramework("ImageIO", .{});
-    mod.linkFramework("ScreenCaptureKit", .{});
-    mod.linkSystemLibrary("objc", .{});
-    return mod;
 }
