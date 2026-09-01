@@ -1,7 +1,11 @@
 const std = @import("std");
 const objc = @import("objc");
 
-pub fn create(window: objc.Object) objc.Object {
+const SCStream = @import("SCStream/Self.zig");
+
+const Self = @import("Self.zig");
+
+pub fn _init_stream(self: *Self, window: objc.Object) void {
     const filter = init: {
         const Class = objc.getClass("SCContentFilter").?;
         const id_alloc = Class.msgSend(objc.Object, "alloc", .{});
@@ -12,6 +16,12 @@ pub fn create(window: objc.Object) objc.Object {
         );
         break :init id_init;
     };
+    defer filter.release();
 
-    return filter;
+    const config = @import("_init_config.zig")._init_config(window);
+
+    const stream = SCStream.init(filter, config.obj, self.delegate);
+
+    self.stream = stream;
+    self.config = config;
 }

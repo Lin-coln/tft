@@ -19,7 +19,7 @@ pub fn listWindows(env: napi.Env) ![]WindowInfo {
   try window.ensure_initialized();
 
   const allocator = env.allocator();
-  const windows = try window.list_windows(allocator);
+  const windows = try window.listWindows(allocator);
   defer allocator.free(windows);
 
   const result = try allocator.alloc(WindowInfo, windows.len);

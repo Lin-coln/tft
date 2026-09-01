@@ -1,7 +1,18 @@
-pub const Window = @import("Window.zig");
+const objc = @import("objc");
 
-pub const ensure_initialized = @import("ensure_initialized.zig").ensure_initialized;
-pub const list_windows = @import("list_windows.zig").list_windows;
+pub const Capture = @import("Capture/Self.zig");
 
-pub const Screenshot = @import("Screenshot.zig");
-pub const encode_png = @import("encode_png.zig").encode_png;
+pub const Window = @import("Screenshot/Window.zig");
+pub const listWindows = @import("Screenshot/listWindows.zig").listWindows;
+
+pub const resolveTarget = @import("Screenshot/resolveTarget.zig").resolveTarget;
+pub const retainCIContext = @import("Screenshot/retainCIContext.zig").retainCIContext;
+pub const encodeSurfacePng = @import("Screenshot/encodeSurfacePng.zig").encodeSurfacePng;
+
+pub fn ensure_initialized() !void {
+    _ = init: {
+        const Class = objc.getClass("NSApplication").?;
+        const app = Class.msgSend(objc.Object, "sharedApplication", .{});
+        break :init app;
+    };
+}

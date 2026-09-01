@@ -1,23 +1,45 @@
 const std = @import("std");
 const napi = @import("napi-zig");
-const window = @import("window");
 const Perf = @import("Perf.zig");
+
+const Capture = @import("window").Capture;
+const ensure_initialized = @import("window").ensure_initialized;
+const resolveTarget = @import("window").resolveTarget;
+const retainCIContext = @import("window").retainCIContext;
+const encodeSurfacePng = @import("window").encodeSurfacePng;
 
 const Self = @This();
 
-native: window.Screenshot,
+window_id: u32,
+capture: *Capture,
 
 pub fn init(window_id: u32) !Self {
-    try window.ensure_initialized();
-    return .{ .native = try window.Screenshot.init(window_id) };
+    try ensure_initialized();
+    const allocator = std.heap.smp_allocator;
+
+    const target = try resolveTarget(window_id);
+    defer target.release();
+
+    const capture = try Capture.init(.{
+        .allocator = allocator,
+        .target = target,
+        .frame_interval_value = 1,
+        .frame_interval_timescale = 60,
+        .shows_cursor = false,
+    });
+
+    return .{
+        .window_id = window_id,
+        .capture = capture,
+    };
 }
 
 pub fn deinit(self: *Self) void {
-    self.native.deinit();
+    self.capture.deinit();
 }
 
 pub fn get_window_id(self: *const Self) u32 {
-    return self.native.window_id;
+    return self.window_id;
 }
 
 pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
@@ -25,14 +47,19 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
     var perf = Perf.init("screenshot", io);
     defer perf.deinit();
 
-    const buffer = try self.native.sample();
-    defer buffer.release();
-    perf.lap("sample");
+    const surface = self.capture.take_surface() orelse
+        return error.TakeSurfaceFailed;
+    defer surface.deinit();
+    perf.lap("take_surface");
+
+    const ci_context = retainCIContext();
+    defer ci_context.release();
+    perf.lap("retainCIContext");
 
     const allocator = env.allocator();
-    const bytes = try window.encode_png(allocator, self.native.ci_context, buffer);
+    const bytes = try encodeSurfacePng(allocator, ci_context, surface.ref);
     defer allocator.free(bytes);
-    perf.lap("encode_png");
+    perf.lap("encode_surface_png");
 
     const arr_buff = try env.createBuffer(bytes.len);
     @memcpy(arr_buff.data, bytes);

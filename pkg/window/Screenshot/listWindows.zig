@@ -4,9 +4,9 @@ const objc = @import("objc");
 const cg = macos.CoreGraphics;
 const Window = @import("Window.zig");
 
-const retainShareableContent = @import("sc/getShareableContent.zig").retain;
+const retainShareableContent = @import("../sc/getShareableContent.zig").retain;
 
-pub fn list_windows(allocator: std.mem.Allocator) ![]Window {
+pub fn listWindows(allocator: std.mem.Allocator) ![]Window {
     const content = try retainShareableContent();
     defer content.release();
 
@@ -41,9 +41,9 @@ fn has_non_empty_names(window: objc.Object) bool {
     return title.getProperty(usize, "length") != 0;
 }
 
-test "list windows" {
+test "Screenshot/listWindows" {
     const allocator = std.testing.allocator;
-    const windows = try list_windows(allocator);
+    const windows = try listWindows(allocator);
     defer allocator.free(windows);
 
     for (windows) |window| {

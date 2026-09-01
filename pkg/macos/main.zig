@@ -8,6 +8,7 @@ pub const CoreFoundation = @import("CoreFoundation.zig");
 pub const CoreGraphics = @import("CoreGraphics.zig");
 pub const CoreVideo = @import("CoreVideo.zig");
 pub const CoreMedia = @import("CoreMedia.zig");
+pub const IOSurface = @import("IOSurface.zig");
 pub const ImageIO = @import("ImageIO.zig");
 pub const objc = @import("objc.zig");
 pub const ScreenCaptureKit = @import("ScreenCaptureKit.zig");

@@ -1,3 +1,4 @@
+const ios = @import("main.zig").IOSurface;
 const OSType = @import("main.zig").OSType;
 
 pub const CVOptionFlags = u64;
@@ -17,3 +18,4 @@ pub extern fn CVPixelBufferGetWidth(pixel_buffer: CVPixelBufferRef) callconv(.c)
 pub extern fn CVPixelBufferGetHeight(pixel_buffer: CVPixelBufferRef) callconv(.c) usize;
 pub extern fn CVPixelBufferLockBaseAddress(pixel_buffer: CVPixelBufferRef, lock_flags: CVPixelBufferLockFlags) callconv(.c) CVReturn;
 pub extern fn CVPixelBufferUnlockBaseAddress(pixel_buffer: CVPixelBufferRef, lock_flags: CVPixelBufferLockFlags) callconv(.c) CVReturn;
+pub extern fn CVPixelBufferGetIOSurface(pixel_buffer: ?CVPixelBufferRef) callconv(.c) ?ios.IOSurfaceRef;
