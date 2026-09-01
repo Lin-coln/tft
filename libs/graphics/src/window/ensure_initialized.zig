@@ -1,8 +1,9 @@
 const objc = @import("objc");
 
 pub fn ensure_initialized() !void {
-    const application_class = objc.getClass("NSApplication") orelse
-        return error.AppKitUnavailable;
-    const application = application_class.msgSend(objc.Object, "sharedApplication", .{});
-    if (application.value == null) return error.AppKitUnavailable;
+    _ = init: {
+        const Class = objc.getClass("NSApplication").?;
+        const app = Class.msgSend(objc.Object, "sharedApplication", .{});
+        break :init app;
+    };
 }

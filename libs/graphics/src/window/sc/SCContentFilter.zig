@@ -1,29 +1,17 @@
 const std = @import("std");
 const objc = @import("objc");
-const utils = @import("utils.zig");
 
-const dispatch = std.c.dispatch;
-
-const SCContentFilter = @This();
-const Self = SCContentFilter;
-
-obj: objc.Object,
-
-pub fn initWithDesktopIndependentWindow(window: objc.Object) !Self {
-    const obj = try utils.init_object(
-        "SCContentFilter",
-        "initWithDesktopIndependentWindow:",
-        .{window},
-    );
-    return .{
-        .obj = obj,
+pub fn create(window: objc.Object) objc.Object {
+    const filter = init: {
+        const Class = objc.getClass("SCContentFilter").?;
+        const id_alloc = Class.msgSend(objc.Object, "alloc", .{});
+        const id_init = id_alloc.msgSend(
+            objc.Object,
+            "initWithDesktopIndependentWindow:",
+            .{window},
+        );
+        break :init id_init;
     };
-}
 
-pub fn deinit(self: Self) void {
-    self.obj.release();
-}
-
-pub fn getPointPixelScale(self: Self) f32 {
-    return self.obj.msgSend(f32, "pointPixelScale", .{});
+    return filter;
 }

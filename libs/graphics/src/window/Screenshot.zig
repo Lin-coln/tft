@@ -4,8 +4,8 @@ const objc = @import("objc");
 
 const SCContentFilter = @import("sc/SCContentFilter.zig");
 const SCStreamConfiguration = @import("sc/SCStreamConfiguration.zig");
-const retainShareableContent = @import("sc/retainShareableContent.zig").retainShareableContent;
-const retainSampleBuffer = @import("sc/retainSampleBuffer.zig").retainSampleBuffer;
+const retainShareableContent = @import("sc/getShareableContent.zig").retain;
+const retainSampleBuffer = @import("sc/captureSampleBuffer.zig").retain;
 
 const cf = macos.CoreFoundation;
 const cg = macos.CoreGraphics;
@@ -24,10 +24,15 @@ pub fn init(window_id: u32) !Self {
     if (window_id == cg.kCGNullWindowID) return error.InvalidWindowId;
     if (!cg.CGPreflightScreenCaptureAccess()) return error.ScreenCaptureKitUnavailable;
 
-    const content = retainShareableContent() orelse return error.ScreenCaptureKitUnavailable;
+    const content = try retainShareableContent();
     errdefer content.release();
 
-    const ci_context = try init_ci_context();
+    const ci_context = init: {
+        const Class = objc.getClass("CIContext").?;
+        const id_alloc = Class.msgSend(objc.Object, "alloc", .{});
+        const id_init = id_alloc.msgSend(objc.Object, "initWithOptions:", .{@as(objc.c.id, null)});
+        break :init id_init;
+    };
     errdefer ci_context.release();
 
     return .{
@@ -43,48 +48,36 @@ pub fn deinit(self: Self) void {
 }
 
 pub fn sample(self: Self) !objc.Object {
-    const target = find_window(
-        self.shareable_content,
-        self.window_id,
-    ) orelse return error.ScreenshotTargetNotFound;
+    const target = find_window(self.shareable_content, self.window_id) orelse
+        return error.ScreenshotTargetNotFound;
     defer target.release();
 
-    const filter = try SCContentFilter.initWithDesktopIndependentWindow(target);
-    defer filter.deinit();
+    const filter = SCContentFilter.create(target);
+    defer filter.release();
 
-    const config = try SCStreamConfiguration.init();
-    defer config.deinit();
-    const frame = target.msgSend(cg.CGRect, "frame", .{});
-    const point_pixel_scale = filter.getPointPixelScale();
-    config.setWidth(pixel_dimension(frame.size.width, point_pixel_scale));
-    config.setHeight(pixel_dimension(frame.size.height, point_pixel_scale));
-    config.setCaptureResolution(sc.SCCaptureResolutionBest);
+    const config = SCStreamConfiguration.create();
+    defer config.release();
+
+    const frame = target.getProperty(cg.CGRect, "frame");
+    const scale = filter.getProperty(f32, "pointPixelScale");
+    config.setProperty("width", pixel_dimension(frame.size.width, scale));
+    config.setProperty("height", pixel_dimension(frame.size.height, scale));
+    config.setProperty("captureResolution", sc.SCCaptureResolutionBest);
+    config.setProperty("pixelFormat", cv.kCVPixelFormatType_ARGB2101010LEPacked);
+    config.setProperty("colorSpaceName", cg.kCGColorSpaceDisplayP3);
+    config.setProperty("showsCursor", false);
     // config.setQueueDepth(8);
-    config.setPixelFormat(cv.kCVPixelFormatType_ARGB2101010LEPacked);
-    config.setColorSpaceName(cg.kCGColorSpaceDisplayP3);
-    config.setShowsCursor(false);
 
-    return retainSampleBuffer(filter.obj, config.obj) orelse
-        return error.ScreenCaptureKitUnavailable;
-}
-
-fn init_ci_context() !objc.Object {
-    const class = objc.getClass("CIContext") orelse return error.CoreImageUnavailable;
-    const allocated = class.msgSend(objc.Object, "alloc", .{});
-    if (allocated.value == null) return error.CoreImageUnavailable;
-
-    const context = allocated.msgSend(objc.Object, "initWithOptions:", .{@as(objc.c.id, null)});
-    if (context.value == null) return error.CoreImageUnavailable;
-    return context;
+    return try retainSampleBuffer(filter, config);
 }
 
 fn find_window(shareable_content: objc.Object, window_id: u32) ?objc.Object {
-    const windows = shareable_content.msgSend(objc.Object, "windows", .{});
-    if (windows.value == null) return null;
+    const windows = shareable_content.getProperty(objc.Object, "windows");
 
     var iterator = windows.iterate();
     while (iterator.next()) |candidate| {
-        if (candidate.msgSend(u32, "windowID", .{}) != window_id) continue;
+        if (candidate.getProperty(u32, "windowID") != window_id)
+            continue;
         return candidate.retain();
     }
 

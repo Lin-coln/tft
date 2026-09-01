@@ -21,11 +21,12 @@ pub fn encode_png(
     const pixel_buffer = cm.CMSampleBufferGetImageBuffer(sample_buffer_ref) orelse
         return error.SampleBufferHasNoImage;
 
-    const ci_image_class = objc.getClass("CIImage") orelse return error.CoreImageUnavailable;
-    const ci_image = ci_image_class.msgSend(objc.Object, "alloc", .{});
-    if (ci_image.value == null) return error.CoreImageUnavailable;
-    const initialized_image = ci_image.msgSend(objc.Object, "initWithCVPixelBuffer:", .{pixel_buffer});
-    if (initialized_image.value == null) return error.CoreImageUnavailable;
+    const initialized_image = init: {
+        const Class = objc.getClass("CIImage").?;
+        const id_alloc = Class.msgSend(objc.Object, "alloc", .{});
+        const id_init = id_alloc.msgSend(objc.Object, "initWithCVPixelBuffer:", .{pixel_buffer});
+        break :init id_init;
+    };
     defer initialized_image.release();
 
     const bounds = cg.CGRect{
@@ -35,10 +36,8 @@ pub fn encode_png(
             .height = @floatFromInt(cv.CVPixelBufferGetHeight(pixel_buffer)),
         },
     };
-    const image = ci_context.msgSend(?cg.CGImageRef, "createCGImage:fromRect:", .{
-        initialized_image,
-        bounds,
-    }) orelse return error.CGImageCreationFailed;
+    const image = ci_context.msgSend(?cg.CGImageRef, "createCGImage:fromRect:", .{ initialized_image, bounds }) orelse
+        return error.CGImageCreationFailed;
     defer cf.CFRelease(@ptrCast(image));
 
     const data = cf.CFDataCreateMutable(null, 0) orelse return error.PNGEncodingFailed;

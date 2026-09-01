@@ -2,23 +2,22 @@ const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
 const cg = macos.CoreGraphics;
-const retainShareableContent = @import("sc/retainShareableContent.zig").retainShareableContent;
 const Window = @import("Window.zig");
 
+const retainShareableContent = @import("sc/getShareableContent.zig").retain;
+
 pub fn list_windows(allocator: std.mem.Allocator) ![]Window {
-    const content = retainShareableContent() orelse
-        return error.ScreenCaptureKitUnavailable;
+    const content = try retainShareableContent();
     defer content.release();
 
-    const shareable_windows = content.msgSend(objc.Object, "windows", .{});
-    if (shareable_windows.value == null) return error.ScreenCaptureKitUnavailable;
+    const shareable_windows = content.getProperty(objc.Object, "windows");
 
     var list: std.ArrayList(Window) = .empty;
     errdefer list.deinit(allocator);
 
     var iterator = shareable_windows.iterate();
     while (iterator.next()) |shareable_window| {
-        const id = shareable_window.msgSend(u32, "windowID", .{});
+        const id = shareable_window.getProperty(u32, "windowID");
         if (id == cg.kCGNullWindowID) continue;
 
         const candidate = Window.init(id);
@@ -31,15 +30,15 @@ pub fn list_windows(allocator: std.mem.Allocator) ![]Window {
 }
 
 fn has_non_empty_names(window: objc.Object) bool {
-    const application = window.msgSend(objc.Object, "owningApplication", .{});
-    if (application.value == null) return false;
-
-    const application_name = application.msgSend(objc.Object, "applicationName", .{});
-    if (application_name.value == null or application_name.msgSend(usize, "length", .{}) == 0)
+    const app = window.getProperty(objc.Object, "owningApplication");
+    const name = app.getProperty(objc.Object, "applicationName");
+    if (name.getProperty(usize, "length") == 0)
         return false;
 
-    const title = window.msgSend(objc.Object, "title", .{});
-    return title.value != null and title.msgSend(usize, "length", .{}) != 0;
+    const title = window.getProperty(objc.Object, "title");
+    if (title.value == null) return false;
+
+    return title.getProperty(usize, "length") != 0;
 }
 
 test "list windows" {
