@@ -1,21 +1,28 @@
 const std = @import("std");
-const add_addon = @import("addon/build.zig").add_addon;
-const create_mod_macos = @import("shared/macos/build.zig").create_mod_macos;
-const create_mod_window = @import("src/window/build.zig").create_mod_window;
-const setup_test_window = @import("src/window/build.zig").setup_test;
+const napi_zig = @import("napi_zig");
 
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const napi_dep = b.dependency("napi_zig", .{});
 
-    const mod_macos = create_mod_macos(b, target, optimize);
+    const mod_window = b.dependency("window", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("window");
 
-    const mod_window = create_mod_window(b, target, optimize, mod_macos);
-    mod_window.addImport("macos", mod_macos);
+    napi_zig.addLib(b, napi_dep, .{
+        .name = "addon",
+        .root = b.path("addon/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "window", .module = mod_window },
+        },
+    });
 
-    add_addon(b, napi_dep, target, optimize, mod_window);
-
+    const tests = b.addTest(.{ .root_module = mod_window });
+    const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
-    setup_test_window(b, test_step, mod_window);
+    test_step.dependOn(&run_tests.step);
 }

@@ -4,19 +4,17 @@
     .fingerprint = 0xc0c9bc580211e081, // Changing this has security and trust implications.
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .window = .{
+            .path = "../../pkg/window",
+        },
         .napi_zig = .{
             .url = "https://github.com/yuku-toolchain/napi-zig/archive/refs/tags/v0.2.8.tar.gz",
             .hash = "napi_zig-0.2.0-XRkY0Y8XAgBr17lGjp5nFI-CYpmjGManq9S4TkaY-D5g",
-        },
-        .zig_objc = .{
-            .url = "https://github.com/mitchellh/zig-objc/archive/c8de82ff80281215ad92900866dab7103a8efa8b.tar.gz",
-            .hash = "zig_objc-0.0.0-Ir_Sp9gsAQCPAJc0oF5xoWePHWP6Y6tCphDeyNUThJoi",
         },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "shared",
-        "src",
+        "addon",
     },
 }
