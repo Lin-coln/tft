@@ -11,6 +11,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("window");
 
+    const mod_capture = b.dependency("capture", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("capture");
+
     napi_zig.addLib(b, napi_dep, .{
         .name = "addon",
         .root = b.path("addon/main.zig"),
@@ -18,6 +23,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "window", .module = mod_window },
+            .{ .name = "capture", .module = mod_capture },
         },
     });
 

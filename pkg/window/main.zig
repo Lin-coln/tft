@@ -1,7 +1,5 @@
 const objc = @import("objc");
 
-pub const Capture = @import("Capture/Self.zig");
-
 pub const Window = @import("Screenshot/Window.zig");
 pub const listWindows = @import("Screenshot/listWindows.zig").listWindows;
 

@@ -2,7 +2,7 @@ const std = @import("std");
 const napi = @import("napi-zig");
 const Perf = @import("Perf.zig");
 
-const Capture = @import("window").Capture;
+const Capture = @import("capture").Capture;
 const ensure_initialized = @import("window").ensure_initialized;
 const resolveTarget = @import("window").resolveTarget;
 const retainCIContext = @import("window").retainCIContext;
