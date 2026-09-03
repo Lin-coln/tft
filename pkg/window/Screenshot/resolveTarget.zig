@@ -2,7 +2,7 @@ const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
 
-const retainShareableContent = @import("../sc/getShareableContent.zig").retain;
+const retainShareableContent = @import("./getShareableContent.zig").retain;
 
 const cg = macos.CoreGraphics;
 
