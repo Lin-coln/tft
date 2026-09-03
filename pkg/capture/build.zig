@@ -31,6 +31,7 @@ pub fn build(b: *std.Build) void {
     });
 
     capture.linkFramework("CoreFoundation", .{});
+    capture.linkFramework("IOSurface", .{});
     capture.linkFramework("CoreGraphics", .{});
     capture.linkFramework("CoreMedia", .{});
     capture.linkFramework("CoreVideo", .{});

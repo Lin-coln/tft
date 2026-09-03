@@ -4,7 +4,7 @@ const objc = @import("objc");
 const cg = macos.CoreGraphics;
 const Window = @import("Window.zig");
 
-const retainShareableContent = @import("../sc/getShareableContent.zig").retain;
+const retainShareableContent = @import("getShareableContent.zig").retain;
 
 pub fn listWindows(allocator: std.mem.Allocator) ![]Window {
     const content = try retainShareableContent();
