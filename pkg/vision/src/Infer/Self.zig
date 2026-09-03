@@ -1,91 +1,67 @@
 const std = @import("std");
 const objc = @import("objc");
 
-const read = @import("readResults.zig");
-
-const log = std.log.scoped(.vision);
-
 const Self = @This();
 
+allocator: std.mem.Allocator,
 request: objc.Object,
-handler: objc.Object,
+requests: objc.Object,
+candidate_count: usize,
 
-pub const Results = read.Results;
+pub const Language = @import("_init_request.zig").Language;
+pub const RecognitionLevel = @import("_init_request.zig").RecognitionLevel;
+pub const Input = @import("_init_handler.zig").Input;
+pub const Region = @import("_set_region_of_interest.zig").Region;
+pub const Results = @import("_read_results.zig").Results;
 
-pub fn init(image_data: objc.Object) Self {
-    const request = init: {
-        const Class = objc.getClass("VNRecognizeTextRequest").?;
-        const allocated = Class.msgSend(objc.Object, "alloc", .{});
-        break :init allocated.msgSend(objc.Object, "init", .{});
-    };
+pub const Options = struct {
+    allocator: std.mem.Allocator,
+    languages: []const Language = &.{ .simplified_chinese, .english_us },
+    recognition_level: RecognitionLevel = .accurate,
+    uses_language_correction: bool = false,
+    minimum_text_height: f32 = 0,
+    candidate_count: usize = 3,
+};
 
-    const NSString = objc.getClass("NSString").?;
-    const language_values = [_]objc.c.id{
-        NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"zh-Hans"}).value,
-        NSString.msgSend(objc.Object, "stringWithUTF8String:", .{"en-US"}).value,
-    };
-    const languages = objc.getClass("NSArray").?.msgSend(
-        objc.Object,
-        "arrayWithObjects:count:",
-        .{ &language_values, language_values.len },
-    );
+pub const RunOptions = struct {
+    region_of_interest: Region = .full,
+};
 
-    request.setProperty("recognitionLevel", @as(isize, 0));
-    request.setProperty("recognitionLanguages", languages);
-    request.setProperty("usesLanguageCorrection", false);
-    request.setProperty("minimumTextHeight", @as(f32, 0));
+pub fn init(options: Options) !*Self {
+    if (options.candidate_count == 0) return error.InvalidOptions;
 
-    const handler = init: {
-        const Class = objc.getClass("VNImageRequestHandler").?;
-        const allocated = Class.msgSend(objc.Object, "alloc", .{});
-        const options = objc.getClass("NSDictionary").?.msgSend(
-            objc.Object,
-            "dictionary",
-            .{},
-        );
-        break :init allocated.msgSend(
-            objc.Object,
-            "initWithData:options:",
-            .{ image_data, options },
-        );
-    };
+    const self = try options.allocator.create(Self);
+    errdefer options.allocator.destroy(self);
 
-    return .{
-        .request = request,
-        .handler = handler,
-    };
+    self.allocator = options.allocator;
+    self.candidate_count = options.candidate_count;
+    try @import("_init_request.zig")._initRequest(self, options);
+    return self;
 }
 
-pub fn deinit(self: Self) void {
-    self.handler.release();
+pub fn deinit(self: *Self) void {
+    self.requests.release();
     self.request.release();
+    self.allocator.destroy(self);
 }
 
-pub fn perform(self: Self) !void {
-    const requests = objc.getClass("NSArray").?.msgSend(
-        objc.Object,
-        "arrayWithObject:",
-        .{self.request},
-    );
-    var error_id: objc.c.id = null;
-    const succeeded = self.handler.msgSend(
-        bool,
-        "performRequests:error:",
-        .{ requests, &error_id },
-    );
-    if (succeeded) return;
+/// Synchronous; do not use the same instance concurrently.
+/// Keep input storage alive and unchanged until this call returns.
+pub fn run(self: *Self, input: Input, options: RunOptions) !Results {
+    const pool = objc.AutoreleasePool.init();
+    defer pool.deinit();
 
-    if (error_id != null) {
-        const description = objc.Object.fromId(error_id).getProperty(
-            objc.Object,
-            "localizedDescription",
-        );
-        const string = description.msgSend([*c]const u8, "UTF8String", .{});
-        if (string != null) log.err("Vision request failed: {s}", .{string});
-    }
-    return error.PerformRequestFailed;
+    try @import("_set_region_of_interest.zig")._setRegionOfInterest(self, options.region_of_interest);
+
+    const handler = try @import("_init_handler.zig")._initHandler(input);
+    defer handler.release();
+
+    try @import("_perform_requests.zig")._performRequests(self, handler);
+    return @import("_read_results.zig")._readResults(self);
 }
 
-pub fn readResults(self: Self, allocator: std.mem.Allocator) !Results {
-    return read.read(allocator, self.request);
+test {
+    _ = @import("_set_region_of_interest.zig");
+    _ = @import("_read_results.zig");
+    _ = @import("_tests.zig");
 }
