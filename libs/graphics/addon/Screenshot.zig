@@ -5,12 +5,12 @@ const Perf = @import("Perf.zig");
 const Capture = @import("capture").Capture;
 const ensure_initialized = @import("window").ensure_initialized;
 const resolveTarget = @import("window").resolveTarget;
-const retainCIContext = @import("window").retainCIContext;
-const encodeSurfacePng = @import("window").encodeSurfacePng;
+const PngEncoder = @import("window").PngEncoder;
 
 const Self = @This();
 
 window_id: u32,
+png_encoder: PngEncoder,
 capture: *Capture,
 
 pub fn init(window_id: u32) !Self {
@@ -19,6 +19,9 @@ pub fn init(window_id: u32) !Self {
 
     const target = try resolveTarget(window_id);
     defer target.release();
+
+    const png_encoder = try PngEncoder.init();
+    errdefer png_encoder.deinit();
 
     const capture = try Capture.init(.{
         .allocator = allocator,
@@ -30,12 +33,14 @@ pub fn init(window_id: u32) !Self {
 
     return .{
         .window_id = window_id,
+        .png_encoder = png_encoder,
         .capture = capture,
     };
 }
 
 pub fn deinit(self: *Self) void {
     self.capture.deinit();
+    self.png_encoder.deinit();
 }
 
 pub fn get_window_id(self: *const Self) u32 {
@@ -52,13 +57,7 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
     defer surface.deinit();
     perf.lap("take_surface");
 
-    const ci_context = retainCIContext();
-    defer ci_context.release();
-    perf.lap("retainCIContext");
-
-    const allocator = env.allocator();
-    const bytes = try encodeSurfacePng(allocator, ci_context, surface.ref);
-    defer allocator.free(bytes);
+    const bytes = try self.png_encoder.encode(surface.ref);
     perf.lap("encode_surface_png");
 
     const arr_buff = try env.createBuffer(bytes.len);

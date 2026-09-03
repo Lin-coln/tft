@@ -5,7 +5,11 @@ pub const listWindows = @import("Screenshot/listWindows.zig").listWindows;
 
 pub const resolveTarget = @import("Screenshot/resolveTarget.zig").resolveTarget;
 pub const retainCIContext = @import("Screenshot/retainCIContext.zig").retainCIContext;
-pub const encodeSurfacePng = @import("Screenshot/encodeSurfacePng.zig").encodeSurfacePng;
+pub const PngEncoder = @import("Screenshot/PngEncoder.zig");
+
+test {
+    _ = PngEncoder;
+}
 
 pub fn ensure_initialized() !void {
     _ = init: {

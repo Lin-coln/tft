@@ -44,5 +44,6 @@ pub extern fn CFStringGetMaximumSizeForEncoding(length: CFIndex, encoding: CFStr
 pub extern fn CFStringGetCString(value: CFStringRef, buffer: [*]u8, size: CFIndex, encoding: CFStringEncoding) callconv(.c) Boolean;
 pub extern fn CFStringCreateWithCString(allocator: ?CFAllocatorRef, string: [*:0]const u8, encoding: CFStringEncoding) callconv(.c) ?CFStringRef;
 pub extern fn CFDataCreateMutable(allocator: ?CFAllocatorRef, capacity: CFIndex) callconv(.c) ?CFMutableDataRef;
+pub extern fn CFDataSetLength(data: CFMutableDataRef, length: CFIndex) callconv(.c) void;
 pub extern fn CFDataGetLength(data: CFDataRef) callconv(.c) CFIndex;
 pub extern fn CFDataGetBytePtr(data: CFDataRef) callconv(.c) [*]const u8;

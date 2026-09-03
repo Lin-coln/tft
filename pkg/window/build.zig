@@ -37,6 +37,7 @@ pub fn build(b: *std.Build) void {
     window.linkFramework("CoreMedia", .{});
     window.linkFramework("CoreVideo", .{});
     window.linkFramework("ImageIO", .{});
+    window.linkFramework("IOSurface", .{});
     window.linkFramework("ScreenCaptureKit", .{});
     window.linkSystemLibrary("objc", .{});
 
