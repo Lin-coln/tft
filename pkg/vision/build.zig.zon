@@ -1,0 +1,18 @@
+.{
+    .name = .vision,
+    .version = "0.1.0",
+    .fingerprint = 0x8e789ea9ee2483aa,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .zig_objc = .{
+            .url = "https://github.com/mitchellh/zig-objc/archive/c8de82ff80281215ad92900866dab7103a8efa8b.tar.gz",
+            .hash = "zig_objc-0.0.0-Ir_Sp9gsAQCPAJc0oF5xoWePHWP6Y6tCphDeyNUThJoi",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "assets",
+    },
+}
