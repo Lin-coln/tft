@@ -10,6 +10,9 @@
         .capture = .{
             .path = "../../pkg/capture",
         },
+        .vision = .{
+            .path = "../../pkg/vision",
+        },
         .napi_zig = .{
             .url = "https://github.com/yuku-toolchain/napi-zig/archive/refs/tags/v0.2.8.tar.gz",
             .hash = "napi_zig-0.2.0-XRkY0Y8XAgBr17lGjp5nFI-CYpmjGManq9S4TkaY-D5g",
