@@ -54,7 +54,14 @@ pub fn init(
     ptr.err = null;
     ptr.err_mutex = .init;
     @import("_delegate.zig")._init_delegate(ptr);
+    errdefer @import("_delegate.zig")._deinit_delegate(ptr);
     @import("_init_stream.zig")._init_stream(ptr, opts.target);
+    errdefer {
+        ptr.stream.deinit();
+        ptr.config.deinit();
+        @import("_update_surface.zig")._update(ptr, null);
+        @import("_update_err.zig")._update(ptr, null);
+    }
 
     try ptr.stream.addStreamOutput(ptr.delegate);
     try ptr.stream.startCapture();
@@ -79,13 +86,12 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn take_surface(self: *Self) ?Surface {
+pub fn get_surface(self: *Self) ?Surface {
     std.Io.Threaded.mutexLock(&self.output_mutex);
     defer std.Io.Threaded.mutexUnlock(&self.output_mutex);
 
-    const surface = self.surface;
-    self.surface = null;
-    return surface;
+    const surface = self.surface orelse return null;
+    return surface.retain();
 }
 
 pub fn take_err(self: *Self) ?objc.Object {

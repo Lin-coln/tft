@@ -1,11 +1,8 @@
-const std = @import("std");
-const objc = @import("objc");
 const macos = @import("macos");
 
 const cm = macos.CoreMedia;
 const cv = macos.CoreVideo;
 const cf = macos.CoreFoundation;
-const IOSurface = macos.IOSurface.IOSurface;
 const IOSurfaceRef = macos.IOSurface.IOSurfaceRef;
 const IOSurfaceIncrementUseCount = macos.IOSurface.IOSurfaceIncrementUseCount;
 const IOSurfaceDecrementUseCount = macos.IOSurface.IOSurfaceDecrementUseCount;
@@ -24,6 +21,10 @@ pub const Surface = struct {
     pub fn deinit(self: Surface) void {
         IOSurfaceDecrementUseCount(self.ref);
         cf.CFRelease(@ptrCast(self.ref));
+    }
+
+    pub fn retain(self: Surface) Surface {
+        return Surface.init(self.ref);
     }
 };
 

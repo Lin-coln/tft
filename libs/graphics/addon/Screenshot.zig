@@ -52,10 +52,10 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
     var perf = Perf.init("screenshot", io);
     defer perf.deinit();
 
-    const surface = self.capture.take_surface() orelse
-        return error.TakeSurfaceFailed;
+    const surface = self.capture.get_surface() orelse
+        return error.SurfaceUnavailable;
     defer surface.deinit();
-    perf.lap("take_surface");
+    perf.lap("get_surface");
 
     const bytes = try self.png_encoder.encode(surface.ref);
     perf.lap("encode_surface_png");
