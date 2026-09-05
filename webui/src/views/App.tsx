@@ -16,6 +16,7 @@ import { InspectorPanel } from "./InspectorPanel";
 import { Screenshot } from "./Screenshot";
 import { SettingsPanel } from "./SettingsPanel";
 import { StatePanel } from "./StatePanel";
+import { Stream } from "./Stream";
 
 export function App() {
   useEffect(() => connect(), []);
@@ -34,6 +35,7 @@ export function App() {
         <AppHeader />
 
         <Screenshot />
+        <Stream />
       </section>
 
       <BottomNavigator />
