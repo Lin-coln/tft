@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) void {
     capture.linkFramework("CoreMedia", .{});
     capture.linkFramework("CoreVideo", .{});
     capture.linkFramework("ScreenCaptureKit", .{});
+    capture.linkFramework("VideoToolbox", .{});
     capture.linkSystemLibrary("objc", .{});
 
     const tests = b.addTest(.{

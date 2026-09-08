@@ -1,4 +1,5 @@
 pub const UInt32 = u32;
+pub const OSStatus = i32;
 pub const FourCharCode = UInt32;
 pub const OSType = FourCharCode;
 pub const Boolean = u8;
@@ -9,6 +10,7 @@ pub const CoreGraphics = @import("CoreGraphics.zig");
 pub const CoreVideo = @import("CoreVideo.zig");
 pub const CoreMedia = @import("CoreMedia.zig");
 pub const IOSurface = @import("IOSurface.zig");
+pub const VideoToolbox = @import("VideoToolbox.zig");
 pub const ImageIO = @import("ImageIO.zig");
 pub const objc = @import("objc.zig");
 pub const ScreenCaptureKit = @import("ScreenCaptureKit.zig");

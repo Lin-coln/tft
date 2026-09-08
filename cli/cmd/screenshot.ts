@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdir } from "node:fs/promises";
 import { InvalidArgumentError } from "commander";
-import { Screenshot } from "@tft/graphics";
+import { Runtime } from "@tft/graphics";
 
 export const command = new Command("screenshot")
   .description("Capture a screenshot of a window")
@@ -15,7 +15,9 @@ export const command = new Command("screenshot")
 
     await mkdir(dirname(out), { recursive: true });
 
-    await Bun.write(out, new Screenshot(opts.id).screenshot());
+    const runtime = new Runtime();
+    runtime.updateTarget(opts.id);
+    await Bun.write(out, runtime.screenshot());
 
     process.stdout.write(`${out}\n`);
   });

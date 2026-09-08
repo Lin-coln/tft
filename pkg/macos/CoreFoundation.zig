@@ -16,6 +16,8 @@ pub const CFDictionaryRef = *const CFDictionary;
 pub const CFMutableDictionaryRef = *CFDictionary;
 pub const CFString = opaque {};
 pub const CFStringRef = *const CFString;
+pub const CFBoolean = opaque {};
+pub const CFBooleanRef = *const CFBoolean;
 pub const CFNumber = opaque {};
 pub const CFNumberRef = *const CFNumber;
 pub const CFData = opaque {};
@@ -29,12 +31,17 @@ pub const kCFNumberSInt64Type: CFNumberType = 4;
 pub const kCFNumberFloatType: CFNumberType = 12;
 pub const kCFStringEncodingUTF8: CFStringEncoding = 0x08000100;
 
+pub extern const kCFBooleanTrue: CFBooleanRef;
+pub extern const kCFBooleanFalse: CFBooleanRef;
+
+pub extern fn CFBooleanGetValue(boolean: CFBooleanRef) callconv(.c) Boolean;
 pub extern fn CFRetain(value: CFTypeRef) callconv(.c) CFTypeRef;
 pub extern fn CFRelease(value: CFTypeRef) callconv(.c) void;
 pub extern fn CFArrayGetCount(array: CFArrayRef) callconv(.c) CFIndex;
 pub extern fn CFArrayGetValueAtIndex(array: CFArrayRef, index: CFIndex) callconv(.c) ?*const anyopaque;
 pub extern fn CFArrayCreate(allocator: ?CFAllocatorRef, values: ?[*]const CFTypeRef, count: CFIndex, callbacks: ?*const CFArrayCallBacks) callconv(.c) ?CFArrayRef;
 pub extern fn CFDictionaryGetValue(dictionary: CFDictionaryRef, key: *const anyopaque) callconv(.c) ?*const anyopaque;
+pub extern fn CFDictionaryCreate(allocator: ?CFAllocatorRef, keys: ?[*]const CFTypeRef, values: ?[*]const CFTypeRef, count: CFIndex, key_callbacks: ?*const CFDictionaryKeyCallBacks, value_callbacks: ?*const CFDictionaryValueCallBacks) callconv(.c) ?CFDictionaryRef;
 pub extern fn CFDictionaryCreateMutable(allocator: ?CFAllocatorRef, capacity: CFIndex, key_callbacks: ?*const CFDictionaryKeyCallBacks, value_callbacks: ?*const CFDictionaryValueCallBacks) callconv(.c) ?CFMutableDictionaryRef;
 pub extern fn CFDictionarySetValue(dictionary: CFMutableDictionaryRef, key: *const anyopaque, value: *const anyopaque) callconv(.c) void;
 pub extern fn CFNumberCreate(allocator: ?CFAllocatorRef, number_type: CFNumberType, value: *const anyopaque) callconv(.c) ?CFNumberRef;
