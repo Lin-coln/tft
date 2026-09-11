@@ -5,7 +5,7 @@ const Self = @import("Self.zig");
 const Capture = cap.Capture;
 const Renderer = cap.Renderer;
 const VideoIO = cap.VideoIO;
-const resolveTarget = @import("window").resolveTarget;
+const resolveTarget = @import("../target/resolveTarget.zig").resolveTarget;
 
 pub fn updateTarget(self: *Self, window_id: u32) !void {
     if (self.window_id == window_id) return;

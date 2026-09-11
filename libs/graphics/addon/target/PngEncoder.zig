@@ -18,9 +18,19 @@ pub fn init() !Self {
 
     const data = cf.CFDataCreateMutable(null, 0) orelse return error.PNGEncodingFailed;
     errdefer cf.CFRelease(data);
-    const png_type = cf.CFStringCreateWithCString(null, "public.png", cf.kCFStringEncodingUTF8) orelse
-        return error.PNGEncodingFailed;
-    return .{ .ci_context = ci_context, .data = data, .png_type = png_type };
+
+    const png_type = cf.CFStringCreateWithCString(
+        null,
+        "public.png",
+        cf.kCFStringEncodingUTF8,
+    ) orelse return error.PNGEncodingFailed;
+    errdefer cf.CFRelease(png_type);
+
+    return .{
+        .ci_context = ci_context,
+        .data = data,
+        .png_type = png_type,
+    };
 }
 
 pub fn deinit(self: Self) void {
@@ -51,12 +61,8 @@ pub fn encode(self: *Self, surface: macos.IOSurface.IOSurfaceRef) ![]const u8 {
     const bounds = cg.CGRect{
         .origin = .{ .x = 0, .y = 0 },
         .size = .{
-            .width = @floatFromInt(
-                macos.IOSurface.IOSurfaceGetWidth(surface),
-            ),
-            .height = @floatFromInt(
-                macos.IOSurface.IOSurfaceGetHeight(surface),
-            ),
+            .width = @floatFromInt(macos.IOSurface.IOSurfaceGetWidth(surface)),
+            .height = @floatFromInt(macos.IOSurface.IOSurfaceGetHeight(surface)),
         },
     };
 
@@ -67,7 +73,6 @@ pub fn encode(self: *Self, surface: macos.IOSurface.IOSurfaceRef) ![]const u8 {
     ) orelse return error.CGImageCreationFailed;
     defer cf.CFRelease(@ptrCast(image));
 
-    // A finalized destination cannot be reused; only its output buffer is reused.
     const destination = image_io.CGImageDestinationCreateWithData(
         self.data,
         self.png_type,
@@ -77,7 +82,8 @@ pub fn encode(self: *Self, surface: macos.IOSurface.IOSurfaceRef) ![]const u8 {
     defer cf.CFRelease(destination);
 
     image_io.CGImageDestinationAddImage(destination, image, null);
-    if (!image_io.CGImageDestinationFinalize(destination)) return error.PNGEncodingFailed;
+    if (!image_io.CGImageDestinationFinalize(destination))
+        return error.PNGEncodingFailed;
 
     const length: usize = @intCast(cf.CFDataGetLength(self.data));
     return cf.CFDataGetBytePtr(self.data)[0..length];
@@ -86,6 +92,7 @@ pub fn encode(self: *Self, surface: macos.IOSurface.IOSurfaceRef) ![]const u8 {
 test "PNG buffer reuse handles changing dimensions and encoding failure" {
     var encoder = try Self.init();
     defer encoder.deinit();
+
     const large = try createTestSurface(64);
     defer cf.CFRelease(large);
     const small = try createTestSurface(16);
@@ -106,7 +113,6 @@ test "PNG buffer reuse handles changing dimensions and encoding failure" {
     try expectPng(copied, 64);
 
     {
-        // Simulate a failed render without changing ownership of the real context.
         encoder.ci_context = .{ .value = null };
         defer encoder.ci_context = context;
         try std.testing.expectError(error.CGImageCreationFailed, encoder.encode(small));
@@ -120,6 +126,7 @@ fn expectPng(bytes: []const u8, size: u32) !void {
     try std.testing.expectEqualStrings("IHDR", bytes[12..16]);
     try std.testing.expectEqual(size, std.mem.readInt(u32, bytes[16..20], .big));
     try std.testing.expectEqual(size, std.mem.readInt(u32, bytes[20..24], .big));
+
     var offset: usize = 8;
     while (offset < bytes.len) {
         try std.testing.expect(bytes.len - offset >= 12);
@@ -140,18 +147,32 @@ fn expectPng(bytes: []const u8, size: u32) !void {
 
 fn createTestSurface(size: i64) !macos.IOSurface.IOSurfaceRef {
     const ios = macos.IOSurface;
-    const properties = cf.CFDictionaryCreateMutable(null, 0, null, null) orelse return error.TestAllocationFailed;
+    const properties = cf.CFDictionaryCreateMutable(null, 0, null, null) orelse
+        return error.TestAllocationFailed;
     defer cf.CFRelease(properties);
+
     const keys = [_]cf.CFStringRef{
-        ios.kIOSurfaceWidth,           ios.kIOSurfaceHeight,
-        ios.kIOSurfaceBytesPerElement, ios.kIOSurfacePixelFormat,
+        ios.kIOSurfaceWidth,
+        ios.kIOSurfaceHeight,
+        ios.kIOSurfaceBytesPerElement,
+        ios.kIOSurfacePixelFormat,
     };
-    const values = [_]i64{ size, size, 4, macos.CoreVideo.kCVPixelFormatType_32BGRA };
+    const values = [_]i64{
+        size,
+        size,
+        4,
+        macos.CoreVideo.kCVPixelFormatType_32BGRA,
+    };
     var numbers: [values.len]cf.CFNumberRef = undefined;
     var initialized: usize = 0;
     defer for (numbers[0..initialized]) |number| cf.CFRelease(number);
+
     for (keys, values, 0..) |key, value, index| {
-        numbers[index] = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &value) orelse return error.TestAllocationFailed;
+        numbers[index] = cf.CFNumberCreate(
+            null,
+            cf.kCFNumberSInt64Type,
+            &value,
+        ) orelse return error.TestAllocationFailed;
         initialized += 1;
         cf.CFDictionarySetValue(properties, key, numbers[index]);
     }

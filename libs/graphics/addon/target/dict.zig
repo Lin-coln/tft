@@ -1,22 +1,15 @@
 const std = @import("std");
 const macos = @import("macos");
+
 const cf = macos.CoreFoundation;
 
-pub fn get_i32(ref: cf.CFDictionaryRef, key: cf.CFStringRef) ?i32 {
+pub fn getI32(ref: cf.CFDictionaryRef, key: cf.CFStringRef) ?i32 {
     const raw_value = cf.CFDictionaryGetValue(ref, key) orelse return null;
     const number: cf.CFNumberRef = @ptrCast(raw_value);
     var value: i32 = 0;
-    if (cf.CFNumberGetValue(number, cf.kCFNumberSInt32Type, &value) == 0) return null;
+    if (cf.CFNumberGetValue(number, cf.kCFNumberSInt32Type, &value) == 0)
+        return null;
     return value;
-}
-
-pub fn get_u32(ref: cf.CFDictionaryRef, key: cf.CFStringRef) ?u32 {
-    const raw_value = cf.CFDictionaryGetValue(ref, key) orelse return null;
-    const number: cf.CFNumberRef = @ptrCast(raw_value);
-    var value: i64 = 0;
-    if (cf.CFNumberGetValue(number, cf.kCFNumberSInt64Type, &value) == 0) return null;
-    if (value < 0 or value > std.math.maxInt(u32)) return null;
-    return @intCast(value);
 }
 
 pub fn dupe(

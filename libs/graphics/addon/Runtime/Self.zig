@@ -7,8 +7,8 @@ const Capture = cap.Capture;
 const Renderer = cap.Renderer;
 const VideoIO = cap.VideoIO;
 const Packet = cap.Encoder.Packet;
-const ensureInitialized = @import("window").ensure_initialized;
-const PngEncoder = @import("window").PngEncoder;
+const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
+const PngEncoder = @import("../target/PngEncoder.zig");
 
 const Self = @This();
 pub const StreamOutputFn = napi.ThreadsafeFn(StreamOutput);

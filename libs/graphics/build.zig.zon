@@ -4,8 +4,12 @@
     .fingerprint = 0xc0c9bc580211e081, // Changing this has security and trust implications.
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        .window = .{
-            .path = "../../pkg/window",
+        .macos = .{
+            .path = "../../pkg/macos",
+        },
+        .zig_objc = .{
+            .url = "https://github.com/mitchellh/zig-objc/archive/c8de82ff80281215ad92900866dab7103a8efa8b.tar.gz",
+            .hash = "zig_objc-0.0.0-Ir_Sp9gsAQCPAJc0oF5xoWePHWP6Y6tCphDeyNUThJoi",
         },
         .capture = .{
             .path = "../../pkg/capture",
