@@ -1,12 +1,10 @@
-import { createH264Encoder, type H264Encoder } from "./liveStream/H264Encoder.ts";
-import { createStreamPublisher, type StreamPublisher } from "./liveStream/LiveStreamPublisher.ts";
-import { config } from "@shared/liveStream.ts";
+import { subscribeStream } from "@services/tft/index.ts";
+import { encodeLiveStreamConfig, encodeLiveStreamPacket } from "@shared/liveStream.ts";
 
 type Req = Bun.BunRequest<"/api/live_stream">;
 
 export type LiveStreamSocketData = {
-  encoder?: H264Encoder;
-  stream?: StreamPublisher;
+  unsubscribe?: () => void;
 };
 
 export const handleLiveStream = {
@@ -22,33 +20,52 @@ export const handleLiveStream = {
 export const liveStreamWebSocket: Bun.WebSocketHandler<LiveStreamSocketData> = {
   data: {} as LiveStreamSocketData,
   open(socket) {
-    const encoder = createH264Encoder((data) => {
-      stream.send(data);
-    });
-    const stream = createStreamPublisher({
-      socket,
-      onPublish() {
-        encoder.encode(encodeFrameFromRate());
-      },
-    });
+    let activeConfig: Uint8Array | null = null;
+    let waitingForKeyframe = true;
+    socket.data.unsubscribe = subscribeStream((packet, streamConfig) => {
+      const description = Uint8Array.from(streamConfig.data);
+      if (!activeConfig || !equalBytes(activeConfig, description)) {
+        socket.send(
+          encodeLiveStreamConfig({
+            width: streamConfig.width,
+            height: streamConfig.height,
+            description,
+          }),
+          false,
+        );
+        activeConfig = description;
+        waitingForKeyframe = true;
+      }
 
-    socket.data.encoder = encoder;
-    socket.data.stream = stream;
+      if (waitingForKeyframe && !packet.keyframe) return;
+      waitingForKeyframe = false;
+
+      socket.send(
+        encodeLiveStreamPacket({
+          keyframe: packet.keyframe,
+          timestamp: toMicroseconds(packet.pts, packet.timebaseNum, packet.timebaseDen),
+          duration: toMicroseconds(packet.duration, packet.timebaseNum, packet.timebaseDen),
+          data: Uint8Array.from(packet.data),
+        }),
+        false,
+      );
+    });
   },
   message() {},
   close(socket) {
-    socket.data.encoder?.close();
-    socket.data.stream?.close();
-    socket.data.encoder = undefined;
-    socket.data.stream = undefined;
+    socket.data.unsubscribe?.();
+    socket.data.unsubscribe = undefined;
   },
 };
 
-function encodeFrameFromRate(): Uint8Array<ArrayBuffer> {
-  const rate = (Date.now() % 1_000) / 1_000;
-  const gray = Math.round(rate * 255);
-  const frame = new Uint8Array(config.width * config.height * 4);
-  const pixels = new Uint32Array(frame.buffer);
-  pixels.fill((0xff << 24) | (gray << 16) | (gray << 8) | gray);
-  return frame;
+function toMicroseconds(value: bigint, timebaseNum: number, timebaseDen: number): number {
+  return Number((value * BigInt(timebaseNum) * 1_000_000n) / BigInt(timebaseDen));
+}
+
+function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  for (let index = 0; index < a.byteLength; index += 1) {
+    if (a[index] !== b[index]) return false;
+  }
+  return true;
 }

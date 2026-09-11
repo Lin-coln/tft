@@ -33,7 +33,7 @@ export function Screenshot() {
   }
 
   return (
-    <div className="mt-6">
+    <section>
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.14em] text-black/35 dark:text-white/30">
           <span>Board capture</span>
@@ -80,6 +80,6 @@ export function Screenshot() {
           Screenshot failed: {error}
         </p>
       )}
-    </div>
+    </section>
   );
 }

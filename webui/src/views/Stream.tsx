@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { cx } from "class-variance-authority";
 import { HiOutlineSignal } from "react-icons/hi2";
 
-import { config } from "@shared/liveStream.ts";
 import { Stream as LiveStream, type StreamStatus } from "@stores/live";
 
 export function Stream() {
@@ -19,10 +18,18 @@ export function Stream() {
         onFrame(frame) {
           try {
             const context = canvasRef.current?.getContext("2d");
-            context?.drawImage(frame, 0, 0, config.width, config.height);
+            if (context) {
+              context.drawImage(frame, 0, 0, context.canvas.width, context.canvas.height);
+            }
           } finally {
             frame.close();
           }
+        },
+        onConfig({ width, height }) {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          canvas.width = width;
+          canvas.height = height;
         },
         onError(streamError) {
           if (!active) return;
@@ -68,8 +75,8 @@ export function Stream() {
         <span className="pointer-events-none absolute bottom-3 right-3 z-10 size-5 border-b border-r border-white/30 mix-blend-difference" />
         <canvas
           ref={canvasRef}
-          width={config.width}
-          height={config.height}
+          width={1920}
+          height={1080}
           aria-label="Decoded live video stream"
           className="block size-full object-contain"
         />

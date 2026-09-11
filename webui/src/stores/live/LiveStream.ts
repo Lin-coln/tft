@@ -7,14 +7,11 @@ export type FramePacket = {
 
 export abstract class LiveStream<T> {
   #maxBufferSize: number;
-  #config: VideoDecoderConfig;
-
   #buffer: FramePacket[] = [];
   #decoder: VideoDecoder;
 
-  constructor(opts: { maxBufferSize?: number; config: VideoDecoderConfig }) {
+  constructor(opts: { maxBufferSize?: number; config?: VideoDecoderConfig }) {
     this.#maxBufferSize = opts.maxBufferSize ?? 3;
-    this.#config = opts.config;
 
     this.#decoder = new VideoDecoder({
       output: (frame) => {
@@ -29,10 +26,7 @@ export abstract class LiveStream<T> {
       this.#consume();
     });
 
-    this.#decoder.configure({
-      ...this.#config,
-      optimizeForLatency: true,
-    });
+    if (opts.config) this.configure(opts.config);
   }
 
   abstract onResolvePacket(data: T): FramePacket;
@@ -52,6 +46,11 @@ export abstract class LiveStream<T> {
     this.#buffer.push(packet);
 
     this.#consume();
+  }
+
+  public configure(config: VideoDecoderConfig): void {
+    this.#buffer.length = 0;
+    this.#decoder.configure({ ...config, optimizeForLatency: true });
   }
 
   public close(): void {

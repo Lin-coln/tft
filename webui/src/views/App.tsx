@@ -13,7 +13,6 @@ import { start, stop, useTFTStore } from "@stores/tft";
 import { useResolvedAppearance } from "@stores/preference";
 import { BottomNavigator } from "./BottomNavigator";
 import { InspectorPanel } from "./InspectorPanel";
-import { Screenshot } from "./Screenshot";
 import { SettingsPanel } from "./SettingsPanel";
 import { StatePanel } from "./StatePanel";
 import { Stream } from "./Stream";
@@ -34,7 +33,6 @@ export function App() {
       <section className="relative z-10 mx-auto flex min-h-dvh max-w-7xl flex-col px-5 pb-32 pt-6 sm:px-8 sm:pt-8">
         <AppHeader />
 
-        <Screenshot />
         <Stream />
       </section>
 

@@ -6,6 +6,7 @@ import { setActivePanel } from "@stores/app";
 import { useClientId } from "@stores/event";
 import { listWindows, setWindowId, useTFTStore } from "@stores/tft";
 import { SidePanel } from "@components/SidePanel";
+import { Screenshot } from "./Screenshot";
 
 export function InspectorPanel() {
   const clientId = useClientId();
@@ -21,6 +22,7 @@ export function InspectorPanel() {
         <InspectorRow label="Connection" value="Connected" status />
         <InspectorRow label="Client ID" value={clientId} mono />
         <WindowListSection />
+        <Screenshot />
         <div>
           <div className="mb-2 text-[10px] uppercase tracking-[0.15em] text-black/40 dark:text-white/30">
             Current snapshot
