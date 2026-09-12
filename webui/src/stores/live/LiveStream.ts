@@ -50,7 +50,11 @@ export abstract class LiveStream<T> {
 
   public configure(config: VideoDecoderConfig): void {
     this.#buffer.length = 0;
-    this.#decoder.configure({ ...config, optimizeForLatency: true });
+    this.#decoder.configure({
+      ...config,
+      hardwareAcceleration: "prefer-hardware",
+      optimizeForLatency: true,
+    });
   }
 
   public close(): void {
