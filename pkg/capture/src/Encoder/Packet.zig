@@ -15,7 +15,6 @@ pts: u64,
 duration: u64,
 timebase_num: i32,
 timebase_den: i32,
-frame_count: u32,
 keyframe: bool,
 
 pub fn fromSampleBuffer(
@@ -44,14 +43,18 @@ pub fn fromSampleBuffer(
     const pts, const duration, const timebase_num, const timebase_den = block: {
         const timebase_num: i32 = 1;
         const timebase_den: i32 = std.time.ns_per_s;
+        const pts_ns = std.math.cast(u64, borrowed.pts.nanoseconds) orelse
+            return error.InvalidTimestamp;
+        const duration_ns = std.math.cast(u64, borrowed.duration.nanoseconds) orelse
+            return error.InvalidDuration;
         const pts = std.math.cast(
             u64,
-            @as(u128, borrowed.timestamp_ns) * @as(u128, @intCast(timebase_den)) /
+            @as(u128, pts_ns) * @as(u128, @intCast(timebase_den)) /
                 (@as(u128, std.time.ns_per_s) * @as(u128, @intCast(timebase_num))),
         ) orelse return error.InvalidTimestamp;
         const duration = std.math.cast(
             u64,
-            @as(u128, borrowed.duration_ns) * @as(u128, @intCast(timebase_den)) /
+            @as(u128, duration_ns) * @as(u128, @intCast(timebase_den)) /
                 (@as(u128, std.time.ns_per_s) * @as(u128, @intCast(timebase_num))),
         ) orelse return error.InvalidDuration;
         break :block .{ pts, duration, timebase_num, timebase_den };
@@ -84,7 +87,6 @@ pub fn fromSampleBuffer(
         .duration = duration,
         .timebase_num = timebase_num,
         .timebase_den = timebase_den,
-        .frame_count = borrowed.frame_count,
         .keyframe = keyframe,
     };
     return self;

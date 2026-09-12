@@ -5,7 +5,6 @@ const Queue = @import("Queue.zig");
 
 const Capture = cap.Capture;
 const Renderer = cap.Renderer;
-const VideoIO = cap.VideoIO;
 const Packet = cap.Encoder.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
 const PngEncoder = @import("../target/PngEncoder.zig");
@@ -35,7 +34,6 @@ pub const StreamOutput = struct {
         try value.setNamedProperty(env, "duration", try env.toJs(self.packet.duration));
         try value.setNamedProperty(env, "timebaseNum", try env.toJs(self.packet.timebase_num));
         try value.setNamedProperty(env, "timebaseDen", try env.toJs(self.packet.timebase_den));
-        try value.setNamedProperty(env, "frameCount", try env.toJs(self.packet.frame_count));
         try value.setNamedProperty(env, "keyframe", try env.toJs(self.packet.keyframe));
         return value;
     }
@@ -50,7 +48,6 @@ stream_output: *StreamOutputContext,
 window_id: ?u32,
 capture: ?*Capture,
 renderer: ?*Renderer,
-io: ?*VideoIO,
 
 pub fn init(
     env: napi.Env,
@@ -94,7 +91,6 @@ pub fn init(
         .window_id = null,
         .capture = null,
         .renderer = null,
-        .io = null,
     };
 }
 
@@ -121,10 +117,8 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
 
 fn deinitTarget(self: *Self) void {
     if (self.renderer) |renderer| renderer.deinit();
-    if (self.io) |io| io.deinit();
     if (self.capture) |capture| capture.deinit();
     self.renderer = null;
-    self.io = null;
     self.capture = null;
     self.window_id = null;
 }

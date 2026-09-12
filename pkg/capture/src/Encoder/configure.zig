@@ -92,7 +92,7 @@ fn handleCallback(
 ) callconv(.c) void {
     const self: *Self = @ptrCast(@alignCast(self_raw orelse return));
     const frame: *Frame = @ptrCast(@alignCast(frame_raw orelse return));
-    defer frame.release();
+    defer frame.destroy();
 
     if (status != 0) {
         self.handle_error(self.ctx, error.EncodeFailed);
@@ -100,10 +100,7 @@ fn handleCallback(
     }
 
     if (info_flags & vt.kVTEncodeInfo_FrameDropped != 0) {
-        Self.log.warn("frame dropped: timestamp_ns={d}, frame_count={d}", .{
-            frame.timestamp_ns,
-            frame.frame_count,
-        });
+        Self.log.warn("frame dropped: pts={d}", .{frame.pts.nanoseconds});
         return;
     }
 

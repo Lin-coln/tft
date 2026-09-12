@@ -21,7 +21,6 @@ export type StreamPacket = {
   duration: bigint;
   timebaseNum: number;
   timebaseDen: number;
-  frameCount: number;
   keyframe: boolean;
 };
 

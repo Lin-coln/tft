@@ -5,8 +5,8 @@ const Self = @import("Self.zig");
 const ResolveConfig = cap.Encoder.ResolveConfig;
 
 pub fn getStreamConfig(self: *Self, env: napi.Env) !napi.Val {
-    const io = self.io orelse return env.createNull();
-    const cfg = io.encoder.getResolvedConfig() orelse return env.createNull();
+    const renderer = self.renderer orelse return env.createNull();
+    const cfg = renderer.encoder.getResolvedConfig() orelse return env.createNull();
     defer cfg.release();
 
     return streamConfigToJs(env, cfg);
