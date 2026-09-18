@@ -5,13 +5,13 @@ const Allocator = std.mem.Allocator;
 
 const Surface = @import("Surface.zig");
 const Scaler = @import("Scaler.zig");
+const Driver = @import("_driver.zig").Driver;
 const _encode = @import("_encode.zig");
 
 pub const Frame = @import("Frame.zig");
 pub const Packet = _encode.Packet;
 
 const Self = @This();
-const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
 
 allocator: Allocator,
 driver: *Driver,
@@ -28,13 +28,15 @@ scaler: *Scaler,
 ctx: *anyopaque,
 handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
 
-pub const Options = struct {
-    ctx: *anyopaque,
-    capture: *Capture,
-    framerate: u32,
-    handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
-};
-pub fn init(allocator: Allocator, opts: Options) !*Self {
+pub fn init(
+    allocator: Allocator,
+    opts: struct {
+        ctx: *anyopaque,
+        capture: *Capture,
+        framerate: u32,
+        handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
+    },
+) !*Self {
     if (opts.framerate == 0 or opts.framerate > std.time.ns_per_s)
         return error.InvalidFramerate;
 
@@ -59,13 +61,13 @@ pub fn init(allocator: Allocator, opts: Options) !*Self {
     });
     errdefer self.driver.destroy();
 
-    self.encoder = try _encode._init_encoder(self);
-    errdefer self.encoder.deinit();
+    self.encoder = try _encode.createEncoder(self);
+    errdefer self.encoder.destroy();
 
     self.scaler = try .init(allocator, 1920, 1080);
     errdefer self.scaler.deinit();
 
-    self.encode_worker = try _encode._init_worker(self);
+    self.encode_worker = try _encode.createWorker(self);
     errdefer self.encode_worker.destroy();
 
     try self.encoder.configure(.{
@@ -82,55 +84,8 @@ pub fn init(allocator: Allocator, opts: Options) !*Self {
 pub fn deinit(self: *Self) void {
     self.driver.destroy();
     self.encode_worker.destroy();
-    self.encoder.deinit();
+    self.encoder.destroy();
     if (self.frame_last) |surface| surface.release();
     self.scaler.deinit();
     self.allocator.destroy(self);
-}
-
-fn handleLoop(
-    self: *Self,
-    ts: std.Io.Clock.Timestamp,
-) ?std.Io.Duration {
-    const pts = ts.raw;
-
-    // render frame
-    var frame: ?*Frame = block: {
-        const surface = self.capture.get_surface() orelse break :block null;
-        defer surface.deinit();
-        const rendered = self.scaler.render(surface.ref) catch break :block null;
-        break :block Frame.create(self.allocator, rendered, pts, .zero) catch null;
-    };
-
-    // frame
-    const duration = self.driver.calcDuration(ts);
-    if (frame) |next| next.addDuration(duration);
-
-    frame = block: {
-        std.Io.Threaded.mutexLock(&self.frame_last_mutex);
-        defer std.Io.Threaded.mutexUnlock(&self.frame_last_mutex);
-
-        const prev = self.frame_last;
-        if (frame == null) {
-            break :block if (prev) |surface|
-                Frame.create(self.allocator, surface.retain(), pts, duration) catch null
-            else
-                null;
-        }
-
-        self.frame_last = frame.?.surface.retain();
-        if (prev) |surface| surface.release();
-        break :block frame;
-    };
-
-    // output
-    if (frame) |next| {
-        self.encode_worker.post(next) catch |err| {
-            std.log.err("frame worker post failed: {s}", .{@errorName(err)});
-            next.destroy();
-        };
-        return duration;
-    } else {
-        return null;
-    }
 }

@@ -4,7 +4,7 @@ pub const Packet = @import("tft/stream").Packet;
 pub const ResolveConfig = @import("tft/stream").ResolveConfig;
 
 test {
-    _ = Renderer.Encoder;
+    _ = Renderer;
 
     _ = @import("Renderer/Scaler.zig");
 }
