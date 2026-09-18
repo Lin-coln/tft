@@ -1,12 +1,14 @@
 const macos = @import("macos");
 
-const Self = @import("Self.zig");
-const Worker = Self.Worker;
-const Frame = Self.Frame;
-const Encoder = Self.Encoder;
-const Packet = @import("tft/stream").Packet;
-
 const cm = macos.CoreMedia;
+
+const Self = @import("Self.zig");
+const Frame = Self.Frame;
+
+pub const Worker = @import("tft/pipeline").Worker.Of(*Self, *Frame);
+pub const Encoder = @import("tft/stream").Encoder.Of(*Self, Frame);
+pub const Packet = @import("tft/stream").Packet;
+pub const ResolveConfig = @import("tft/stream").ResolveConfig;
 
 pub fn _init_encoder(self: *Self) !*Encoder {
     return try Encoder.init(self.allocator, .{

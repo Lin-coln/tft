@@ -3,15 +3,15 @@ const Capture = @import("tft/capture").Capture;
 
 const Allocator = std.mem.Allocator;
 
-pub const Frame = @import("Frame.zig");
 const Surface = @import("Surface.zig");
 const Scaler = @import("Scaler.zig");
-const Packet = @import("tft/stream").Packet;
+const _encode = @import("_encode.zig");
+
+pub const Frame = @import("Frame.zig");
+pub const Packet = _encode.Packet;
 
 const Self = @This();
 const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
-pub const Worker = @import("tft/pipeline").Worker.Of(*Self, *Frame);
-pub const Encoder = @import("tft/stream").Encoder.Of(*Self, Frame);
 
 allocator: Allocator,
 driver: *Driver,
@@ -21,8 +21,8 @@ capture: *Capture,
 frame_last: ?*Surface,
 frame_last_mutex: std.Io.Mutex,
 
-encode_worker: *Worker,
-encoder: *Encoder,
+encode_worker: *_encode.Worker,
+encoder: *_encode.Encoder,
 scaler: *Scaler,
 
 ctx: *anyopaque,
@@ -59,13 +59,13 @@ pub fn init(allocator: Allocator, opts: Options) !*Self {
     });
     errdefer self.driver.destroy();
 
-    self.encoder = try @import("_encode.zig")._init_encoder(self);
+    self.encoder = try _encode._init_encoder(self);
     errdefer self.encoder.deinit();
 
     self.scaler = try .init(allocator, 1920, 1080);
     errdefer self.scaler.deinit();
 
-    self.encode_worker = try @import("_encode.zig")._init_worker(self);
+    self.encode_worker = try _encode._init_worker(self);
     errdefer self.encode_worker.destroy();
 
     try self.encoder.configure(.{
