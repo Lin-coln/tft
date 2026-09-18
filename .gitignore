@@ -40,3 +40,6 @@ libs/resolve/assets/models
 zig-out
 zig-pkg
 .zig-cache
+
+# submodule
+sdk

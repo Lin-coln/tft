@@ -5,7 +5,7 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .macos = .{
-            .path = "../macos",
+            .path = "../../sdk/shared/macos",
         },
         .zig_objc = .{
             .url = "https://github.com/mitchellh/zig-objc/archive/c8de82ff80281215ad92900866dab7103a8efa8b.tar.gz",

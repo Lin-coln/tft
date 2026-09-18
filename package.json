@@ -11,11 +11,12 @@
   },
   "type": "module",
   "scripts": {
-    "sdk:update": "git submodule update --remote sdk",
-    "webui:dev": "bun --cwd=webui run dev",
     "prepare": "husky",
     "format": "oxfmt --no-error-on-unmatched-pattern",
-    "cli:link": "cd cli && bun link"
+    "sdk:update": "git submodule update --remote sdk",
+    "graphics:build": "bun --cwd=libs/graphics run zig:build",
+    "cli:link": "cd cli && bun link",
+    "webui:dev": "bun --cwd=webui run dev"
   },
   "devDependencies": {
     "husky": "^9.1.7",
