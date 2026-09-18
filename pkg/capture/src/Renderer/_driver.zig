@@ -1,4 +1,5 @@
 const std = @import("std");
+const cv = @import("macos").CoreVideo;
 
 const Self = @import("Self.zig");
 const Frame = Self.Frame;
@@ -15,8 +16,8 @@ fn handleLoop(
     var frame: ?*Frame = block: {
         const surface = self.capture.get_surface() orelse break :block null;
         defer surface.deinit();
-        const rendered = self.scaler.render(surface.ref) catch break :block null;
-        break :block Frame.create(self.allocator, rendered, pts, .zero) catch null;
+        const image_buffer = self.scaler.render(surface.ref) catch break :block null;
+        break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
     };
 
     // frame
@@ -29,14 +30,14 @@ fn handleLoop(
 
         const prev = self.frame_last;
         if (frame == null) {
-            break :block if (prev) |surface|
-                Frame.create(self.allocator, surface.retain(), pts, duration) catch null
+            break :block if (prev) |image_buffer|
+                Frame.create(self.allocator, cv.CVBufferRetain(image_buffer).?, pts, duration) catch null
             else
                 null;
         }
 
-        self.frame_last = frame.?.surface.retain();
-        if (prev) |surface| surface.release();
+        self.frame_last = cv.CVBufferRetain(frame.?.image_buffer).?;
+        cv.CVBufferRelease(prev);
         break :block frame;
     };
 

@@ -1,5 +1,6 @@
 const std = @import("std");
-const Surface = @import("Surface.zig");
+const macos = @import("macos");
+const cv = macos.CoreVideo;
 
 const Self = @This();
 
@@ -7,15 +8,15 @@ allocator: std.mem.Allocator,
 pts: std.Io.Timestamp,
 duration: std.Io.Duration,
 
-surface: *Surface,
+image_buffer: cv.CVImageBufferRef,
 
 pub fn create(
     allocator: std.mem.Allocator,
-    surface: *Surface,
+    image_buffer: cv.CVImageBufferRef,
     pts: std.Io.Timestamp,
     duration: std.Io.Duration,
 ) !*Self {
-    errdefer surface.release();
+    errdefer cv.CVBufferRelease(image_buffer);
 
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
@@ -24,18 +25,18 @@ pub fn create(
         .allocator = allocator,
         .pts = pts,
         .duration = duration,
-        .surface = surface,
+        .image_buffer = image_buffer,
     };
     return self;
+}
+
+pub fn destroy(self: *Self) void {
+    cv.CVBufferRelease(self.image_buffer);
+    self.allocator.destroy(self);
 }
 
 pub fn addDuration(self: *Self, duration: std.Io.Duration) void {
     self.duration = .fromNanoseconds(
         self.duration.nanoseconds +| duration.nanoseconds,
     );
-}
-
-pub fn destroy(self: *Self) void {
-    self.surface.release();
-    self.allocator.destroy(self);
 }

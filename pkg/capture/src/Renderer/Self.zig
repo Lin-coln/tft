@@ -3,7 +3,7 @@ const Capture = @import("tft/capture").Capture;
 
 const Allocator = std.mem.Allocator;
 
-const Surface = @import("Surface.zig");
+const cv = @import("macos").CoreVideo;
 const Scaler = @import("Scaler.zig");
 const Driver = @import("_driver.zig").Driver;
 const _encode = @import("_encode.zig");
@@ -18,7 +18,7 @@ driver: *Driver,
 
 capture: *Capture,
 
-frame_last: ?*Surface,
+frame_last: ?cv.CVImageBufferRef,
 frame_last_mutex: std.Io.Mutex,
 
 encode_worker: *_encode.Worker,
@@ -85,7 +85,7 @@ pub fn deinit(self: *Self) void {
     self.driver.destroy();
     self.encode_worker.destroy();
     self.encoder.destroy();
-    if (self.frame_last) |surface| surface.release();
+    cv.CVBufferRelease(self.frame_last);
     self.scaler.deinit();
     self.allocator.destroy(self);
 }

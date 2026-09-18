@@ -1,7 +1,7 @@
 const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
-const Surface = @import("Surface.zig");
+const Texture = @import("tft/stream").Texture;
 
 const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
@@ -9,8 +9,6 @@ const ios = macos.IOSurface;
 const metal = macos.Metal;
 const foundation = macos.Foundation;
 const Self = @This();
-
-const pool_capacity = 12;
 
 const Params = extern struct { origin: @Vector(2, f32), size: @Vector(2, f32) };
 
@@ -44,8 +42,8 @@ allocator: std.mem.Allocator,
 device: objc.Object,
 command_queue: objc.Object,
 pipeline: objc.Object,
-slots: []*Surface,
-next_slot: std.atomic.Value(usize),
+pixel_pool: cv.CVPixelBufferPoolRef,
+texture_cache: cv.CVMetalTextureCacheRef,
 width: usize,
 height: usize,
 
@@ -64,22 +62,24 @@ pub fn init(allocator: std.mem.Allocator, width: usize, height: usize) !*Self {
     const pipeline = try createPipeline(device);
     errdefer pipeline.release();
 
-    const slots = try allocator.alloc(*Surface, pool_capacity);
-    errdefer allocator.free(slots);
-    var initialized: usize = 0;
-    errdefer for (slots[0..initialized]) |surface| surface.release();
-    while (initialized < slots.len) : (initialized += 1) {
-        slots[initialized] = try createSlot(allocator, device, width, height);
-    }
+    const pixel_pool = try createPixelPool(width, height);
+    errdefer cf.CFRelease(@ptrCast(pixel_pool));
+
+    var cache_ref: ?cv.CVMetalTextureCacheRef = null;
+    if (cv.CVMetalTextureCacheCreate(null, null, device.value.?, null, &cache_ref) != 0)
+        return error.TextureCacheCreationFailed;
+    const texture_cache = cache_ref orelse return error.TextureCacheCreationFailed;
+    errdefer cf.CFRelease(@ptrCast(texture_cache));
 
     const self = try allocator.create(Self);
+    errdefer allocator.destroy(self);
     self.* = .{
         .allocator = allocator,
         .device = device,
         .command_queue = command_queue,
         .pipeline = pipeline,
-        .slots = slots,
-        .next_slot = .init(0),
+        .pixel_pool = pixel_pool,
+        .texture_cache = texture_cache,
         .width = width,
         .height = height,
     };
@@ -87,42 +87,52 @@ pub fn init(allocator: std.mem.Allocator, width: usize, height: usize) !*Self {
 }
 
 pub fn deinit(self: *Self) void {
-    for (self.slots) |surface| {
-        std.debug.assert(surface.ref_count.load(.acquire) == 1);
-        surface.release();
-    }
-    self.allocator.free(self.slots);
+    cf.CFRelease(@ptrCast(self.texture_cache));
+    cf.CFRelease(@ptrCast(self.pixel_pool));
     self.pipeline.release();
     self.command_queue.release();
     self.device.release();
     self.allocator.destroy(self);
 }
 
-/// Renders synchronously and returns an owned reference to a fixed-size surface.
-pub fn render(self: *Self, source: ios.IOSurfaceRef) !*Surface {
+/// Renders synchronously and returns an owned image buffer.
+pub fn render(self: *Self, source: ios.IOSurfaceRef) !cv.CVImageBufferRef {
     const source_width = ios.IOSurfaceGetWidth(source);
     const source_height = ios.IOSurfaceGetHeight(source);
     if (source_width == 0 or source_height == 0) return error.InvalidSourceDimensions;
 
-    const surface = self.acquireSurface() orelse return error.SurfacePoolExhausted;
-    errdefer surface.release();
+    var buffer_ref: ?cv.CVPixelBufferRef = null;
+    if (cv.CVPixelBufferPoolCreatePixelBuffer(null, self.pixel_pool, &buffer_ref) != 0)
+        return error.PixelBufferCreationFailed;
+    const image_buffer = buffer_ref orelse return error.PixelBufferCreationFailed;
+    errdefer cf.CFRelease(@ptrCast(image_buffer));
 
-    const pixel_format = switch (ios.IOSurfaceGetPixelFormat(source)) {
-        cv.kCVPixelFormatType_32BGRA => metal.MTLPixelFormatBGRA8Unorm,
-        cv.kCVPixelFormatType_ARGB2101010LEPacked => metal.MTLPixelFormatBGR10A2Unorm,
-        else => return error.UnsupportedPixelFormat,
-    };
+    var texture_ref: ?cv.CVMetalTextureRef = null;
+    if (cv.CVMetalTextureCacheCreateTextureFromImage(
+        null,
+        self.texture_cache,
+        image_buffer,
+        null,
+        metal.MTLPixelFormatBGRA8Unorm,
+        self.width,
+        self.height,
+        0,
+        &texture_ref,
+    ) != 0) return error.TextureCreationFailed;
+    const output_texture = texture_ref orelse return error.TextureCreationFailed;
+    defer cf.CFRelease(@ptrCast(output_texture));
+    const output_obj = cv.CVMetalTextureGetTexture(output_texture) orelse return error.TextureCreationFailed;
 
     const autorelease_pool = objc.AutoreleasePool.init();
     defer autorelease_pool.deinit();
-    const source_texture = try createTexture(
-        self.device,
-        source,
-        source_width,
-        source_height,
-        pixel_format,
-        metal.MTLTextureUsageShaderRead,
-    );
+    const source_texture = try Texture.fromIOSurface(self.allocator, .{
+        .device = self.device,
+        .width = source_width,
+        .height = source_height,
+        .surface = source,
+        .usage = metal.MTLTextureUsageShaderRead,
+        .storage_mode = metal.MTLStorageModeShared,
+    });
     defer source_texture.release();
 
     const output_width: f32 = @floatFromInt(self.width);
@@ -143,8 +153,8 @@ pub fn render(self: *Self, source: ios.IOSurfaceRef) !*Surface {
     const encoder = command_buffer.getProperty(objc.Object, "computeCommandEncoder");
     if (encoder.value == null) return error.CommandEncoderCreationFailed;
     encoder.msgSend(void, "setComputePipelineState:", .{self.pipeline});
-    encoder.msgSend(void, "setTexture:atIndex:", .{ source_texture, @as(usize, 0) });
-    encoder.msgSend(void, "setTexture:atIndex:", .{ surface.texture, @as(usize, 1) });
+    encoder.msgSend(void, "setTexture:atIndex:", .{ source_texture.obj, @as(usize, 0) });
+    encoder.msgSend(void, "setTexture:atIndex:", .{ output_obj, @as(usize, 1) });
     encoder.msgSend(void, "setBytes:length:atIndex:", .{
         &params,
         @as(usize, @sizeOf(Params)),
@@ -159,35 +169,7 @@ pub fn render(self: *Self, source: ios.IOSurfaceRef) !*Surface {
     command_buffer.msgSend(void, "waitUntilCompleted", .{});
     if (command_buffer.getProperty(usize, "status") == 5) return error.RenderFailed;
 
-    return surface;
-}
-
-fn acquireSurface(self: *Self) ?*Surface {
-    const start = self.next_slot.fetchAdd(1, .monotonic);
-    for (0..self.slots.len) |offset| {
-        const surface = self.slots[(start + offset) % self.slots.len];
-        if (surface.tryRetainAvailable()) return surface;
-    }
-    return null;
-}
-
-fn createSlot(
-    allocator: std.mem.Allocator,
-    device: objc.Object,
-    width: usize,
-    height: usize,
-) !*Surface {
-    const surface_ref = try createIOSurface(width, height);
-    defer cf.CFRelease(@ptrCast(surface_ref));
-    const texture = try createTexture(
-        device,
-        surface_ref,
-        width,
-        height,
-        metal.MTLPixelFormatBGRA8Unorm,
-        metal.MTLTextureUsageShaderWrite,
-    );
-    return Surface.create(allocator, surface_ref, texture);
+    return image_buffer;
 }
 
 fn createPipeline(device: objc.Object) !objc.Object {
@@ -220,52 +202,48 @@ fn createPipeline(device: objc.Object) !objc.Object {
     return pipeline;
 }
 
-fn createTexture(
-    device: objc.Object,
-    surface: ios.IOSurfaceRef,
-    width: usize,
-    height: usize,
-    pixel_format: usize,
-    usage: usize,
-) !objc.Object {
-    const descriptor_class = objc.getClass("MTLTextureDescriptor") orelse return error.MetalUnavailable;
-    const descriptor = descriptor_class.msgSend(
-        objc.Object,
-        "texture2DDescriptorWithPixelFormat:width:height:mipmapped:",
-        .{ pixel_format, width, height, false },
-    );
-    if (descriptor.value == null) return error.TextureDescriptorCreationFailed;
-    descriptor.setProperty("usage", usage);
-    const texture = device.msgSend(
-        objc.Object,
-        "newTextureWithDescriptor:iosurface:plane:",
-        .{ descriptor, surface, @as(usize, 0) },
-    );
-    if (texture.value == null) return error.TextureCreationFailed;
-    return texture;
-}
+fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
+    const surface_properties = cf.CFDictionaryCreateMutable(
+        null,
+        0,
+        &cf.kCFTypeDictionaryKeyCallBacks,
+        &cf.kCFTypeDictionaryValueCallBacks,
+    ) orelse return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(surface_properties);
 
-fn createIOSurface(width: usize, height: usize) !ios.IOSurfaceRef {
-    const properties = cf.CFDictionaryCreateMutable(null, 0, null, null) orelse
-        return error.SurfacePropertyCreationFailed;
-    defer cf.CFRelease(properties);
-    const keys = [_]cf.CFStringRef{
-        ios.kIOSurfaceWidth,
-        ios.kIOSurfaceHeight,
-        ios.kIOSurfaceBytesPerElement,
-        ios.kIOSurfacePixelFormat,
-    };
-    const values = [_]i64{ @intCast(width), @intCast(height), 4, cv.kCVPixelFormatType_32BGRA };
-    var numbers: [values.len]cf.CFNumberRef = undefined;
-    var initialized: usize = 0;
-    defer for (numbers[0..initialized]) |number| cf.CFRelease(number);
-    for (keys, values, 0..) |key, value, index| {
-        numbers[index] = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &value) orelse
-            return error.SurfacePropertyCreationFailed;
-        initialized += 1;
-        cf.CFDictionarySetValue(properties, key, numbers[index]);
-    }
-    return ios.IOSurfaceCreate(properties) orelse error.SurfaceCreationFailed;
+    const attributes = cf.CFDictionaryCreateMutable(
+        null,
+        0,
+        &cf.kCFTypeDictionaryKeyCallBacks,
+        &cf.kCFTypeDictionaryValueCallBacks,
+    ) orelse return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(attributes);
+
+    const width_value: i64 = @intCast(width);
+    const width_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &width_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(width_number));
+    const height_value: i64 = @intCast(height);
+    const height_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &height_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(height_number));
+    const format_value: i64 = cv.kCVPixelFormatType_32BGRA;
+    const format_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &format_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(format_number));
+
+    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferWidthKey, width_number);
+    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferHeightKey, height_number);
+    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferPixelFormatTypeKey, format_number);
+    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferMetalCompatibilityKey, cf.kCFBooleanTrue);
+    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferIOSurfacePropertiesKey, surface_properties);
+
+    var pool_ref: ?cv.CVPixelBufferPoolRef = null;
+    if (cv.CVPixelBufferPoolCreate(null, null, attributes, &pool_ref) != 0)
+        return error.PixelBufferPoolCreationFailed;
+    const pixel_pool = pool_ref orelse return error.PixelBufferPoolCreationFailed;
+    errdefer cf.CFRelease(@ptrCast(pixel_pool));
+    return pixel_pool;
 }
 
 fn string(value: []const u8) !objc.Object {
