@@ -1,7 +1,8 @@
 const macos = @import("macos");
 
 const Self = @import("Self.zig");
-const FrameWorker = Self.FrameWorker;
+const Worker = Self.Worker;
+const WorkerFlag = @import("tft/pipeline").Worker.Flag;
 const Frame = Self.Frame;
 const Encoder = @import("../Encoder/Self.zig");
 const Packet = Encoder.Packet;
@@ -16,17 +17,26 @@ pub fn _init_encoder(self: *Self) !*Encoder {
     });
 }
 
-pub fn _init_worker(self: *Self) !*FrameWorker {
-    return try FrameWorker.init(self.allocator, .{
+pub fn _init_worker(self: *Self) !*Worker {
+    return try Worker.create(self.allocator, .{
         .ctx = self,
-        .handle_execute = handleExecuteFrame,
+        .strategy = .{ .merge = .{ .capacity = 6, .on_merge = mergeFrames } },
+        .handle_loop = handleExecuteFrame,
     });
 }
 
-fn handleExecuteFrame(self: *Self, frame: *Frame) !void {
-    self.encoder.encode(frame) catch |err| {
-        handleEncodeError(self, err);
-    };
+fn mergeFrames(last: **Frame, frame: *Frame) !void {
+    last.*.addDuration(frame.duration);
+    frame.destroy();
+}
+
+fn handleExecuteFrame(self: *Self, frame: *Frame, flag: WorkerFlag) void {
+    switch (flag) {
+        .execute => self.encoder.encode(frame) catch |err| {
+            handleEncodeError(self, err);
+        },
+        .release => frame.destroy(),
+    }
 }
 
 fn handleEncodeError(ctx: *anyopaque, err: anyerror) void {

@@ -12,8 +12,7 @@ pub fn updateTarget(self: *Self, window_id: u32) !void {
     const target = try resolveTarget(window_id);
     defer target.release();
 
-    const capture = try Capture.init(.{
-        .allocator = self.allocator,
+    const capture = try Capture.init(self.allocator, .{
         .target = target,
         .frame_interval_value = 1,
         .frame_interval_timescale = 60,

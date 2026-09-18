@@ -9,7 +9,7 @@ const Scaler = @import("Scaler.zig");
 
 const Self = @This();
 const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
-pub const FrameWorker = @import("FrameWorker.zig").FrameWorker(Self);
+pub const Worker = @import("tft/pipeline").Worker.Of(*Self, *Frame);
 
 allocator: std.mem.Allocator,
 driver: *Driver,
@@ -19,7 +19,7 @@ capture: *Capture,
 frame_last: ?*Surface,
 frame_last_mutex: std.Io.Mutex,
 
-encode_worker: *FrameWorker,
+encode_worker: *Worker,
 encoder: *Encoder,
 scaler: *Scaler,
 
@@ -64,14 +64,14 @@ pub fn init(allocator: std.mem.Allocator, opts: Options) !*Self {
     errdefer self.scaler.deinit();
 
     self.encode_worker = try @import("_encode.zig")._init_worker(self);
-    errdefer self.encode_worker.deinit();
+    errdefer self.encode_worker.destroy();
 
     try self.encoder.configure(.{
         .width = 1920,
         .height = 1080,
         .framerate = @intCast(opts.framerate),
     });
-    try self.encode_worker.run();
+    try self.encode_worker.start();
     try self.driver.start();
 
     return self;
@@ -79,7 +79,7 @@ pub fn init(allocator: std.mem.Allocator, opts: Options) !*Self {
 
 pub fn deinit(self: *Self) void {
     self.driver.destroy();
-    self.encode_worker.deinit();
+    self.encode_worker.destroy();
     self.encoder.deinit();
     if (self.frame_last) |surface| surface.release();
     self.scaler.deinit();
@@ -123,7 +123,10 @@ fn handleLoop(
 
     // output
     if (frame) |next| {
-        self.encode_worker.push(next);
+        self.encode_worker.post(next) catch |err| {
+            std.log.err("frame worker post failed: {s}", .{@errorName(err)});
+            next.destroy();
+        };
         return duration;
     } else {
         return null;
