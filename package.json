@@ -11,6 +11,7 @@
   },
   "type": "module",
   "scripts": {
+    "sdk:update": "git submodule update --remote sdk",
     "webui:dev": "bun --cwd=webui run dev",
     "prepare": "husky",
     "format": "oxfmt --no-error-on-unmatched-pattern",
