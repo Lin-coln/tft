@@ -8,7 +8,7 @@ const Packet = Encoder.Packet;
 const Scaler = @import("Scaler.zig");
 
 const Self = @This();
-const Driver = @import("Driver.zig").Driver(Self);
+const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
 pub const FrameWorker = @import("FrameWorker.zig").FrameWorker(Self);
 
 allocator: std.mem.Allocator,
@@ -51,12 +51,11 @@ pub fn init(allocator: std.mem.Allocator, opts: Options) !*Self {
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
     };
-    self.driver = try .init(allocator, .{
+    self.driver = try Driver.create(allocator, .{
         .ctx = self,
         .interval = .fromNanoseconds(std.time.ns_per_s / opts.framerate),
-        .handle_loop = handleLoop,
     });
-    errdefer self.driver.deinit();
+    errdefer self.driver.destroy();
 
     self.encoder = try @import("_encode.zig")._init_encoder(self);
     errdefer self.encoder.deinit();
@@ -73,13 +72,13 @@ pub fn init(allocator: std.mem.Allocator, opts: Options) !*Self {
         .framerate = @intCast(opts.framerate),
     });
     try self.encode_worker.run();
-    try self.driver.run();
+    try self.driver.start();
 
     return self;
 }
 
 pub fn deinit(self: *Self) void {
-    self.driver.deinit();
+    self.driver.destroy();
     self.encode_worker.deinit();
     self.encoder.deinit();
     if (self.frame_last) |surface| surface.release();

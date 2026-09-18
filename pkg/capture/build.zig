@@ -24,6 +24,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("capture");
 
+    const tft_pipeline = b.dependency("tft_pipeline", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("pipeline");
+
     const capture = b.addModule("capture", .{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -33,6 +38,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "macos", .module = macos },
             .{ .name = "objc", .module = objc },
             .{ .name = "tft/capture", .module = tft_capture },
+            .{ .name = "tft/pipeline", .module = tft_pipeline },
         },
     });
 
