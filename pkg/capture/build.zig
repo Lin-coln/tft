@@ -19,6 +19,11 @@ pub fn build(b: *std.Build) void {
         .@"add-paths" = false,
     }).module("objc");
 
+    const tft_capture = b.dependency("tft_capture", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("capture");
+
     const capture = b.addModule("capture", .{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -27,6 +32,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "macos", .module = macos },
             .{ .name = "objc", .module = objc },
+            .{ .name = "tft/capture", .module = tft_capture },
         },
     });
 

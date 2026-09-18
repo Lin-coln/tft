@@ -1,8 +1,7 @@
 const std = @import("std");
-const cap = @import("capture");
 const Infer = @import("vision").Infer;
 
-const Capture = cap.Capture;
+const Capture = @import("tft/capture").Capture;
 const dispatch = std.c.dispatch;
 const log = std.log.scoped(.infer_session);
 const Self = @This();

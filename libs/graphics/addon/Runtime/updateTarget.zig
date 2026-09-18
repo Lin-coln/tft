@@ -2,7 +2,7 @@ const std = @import("std");
 const cap = @import("capture");
 const Self = @import("Self.zig");
 
-const Capture = cap.Capture;
+const Capture = @import("tft/capture").Capture;
 const Renderer = cap.Renderer;
 const resolveTarget = @import("../target/resolveTarget.zig").resolveTarget;
 

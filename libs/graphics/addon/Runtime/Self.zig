@@ -3,7 +3,7 @@ const napi = @import("napi-zig");
 const cap = @import("capture");
 const Queue = @import("Queue.zig");
 
-const Capture = cap.Capture;
+const Capture = @import("tft/capture").Capture;
 const Renderer = cap.Renderer;
 const Packet = cap.Encoder.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;

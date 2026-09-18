@@ -37,6 +37,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("capture");
 
+    const mod_tft_capture = b.dependency("tft_capture", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("capture");
+
     const mod_vision = b.dependency("vision", .{
         .target = target,
         .optimize = optimize,
@@ -51,6 +56,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "macos", .module = mod_macos },
             .{ .name = "objc", .module = mod_objc },
             .{ .name = "capture", .module = mod_capture },
+            .{ .name = "tft/capture", .module = mod_tft_capture },
             .{ .name = "vision", .module = mod_vision },
         },
     });
@@ -78,6 +84,7 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
             .imports = &.{
                 .{ .name = "capture", .module = mod_capture },
+                .{ .name = "tft/capture", .module = mod_tft_capture },
                 .{ .name = "vision", .module = mod_vision },
             },
         }),

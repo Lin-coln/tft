@@ -1,5 +1,5 @@
 const std = @import("std");
-const Capture = @import("../Capture/Self.zig");
+const Capture = @import("tft/capture").Capture;
 
 pub const Frame = @import("Frame.zig");
 const Surface = @import("Surface.zig");
