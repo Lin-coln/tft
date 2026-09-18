@@ -29,6 +29,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("pipeline");
 
+    const tft_stream = b.dependency("tft_stream", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("stream");
+
     const capture = b.addModule("capture", .{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -39,6 +44,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "objc", .module = objc },
             .{ .name = "tft/capture", .module = tft_capture },
             .{ .name = "tft/pipeline", .module = tft_pipeline },
+            .{ .name = "tft/stream", .module = tft_stream },
         },
     });
 
@@ -47,7 +53,6 @@ pub fn build(b: *std.Build) void {
     capture.linkFramework("IOSurface", .{});
     capture.linkFramework("CoreMedia", .{});
     capture.linkFramework("CoreVideo", .{});
-    capture.linkFramework("VideoToolbox", .{});
     capture.linkSystemLibrary("objc", .{});
 
     const tests = b.addTest(.{

@@ -1,7 +1,7 @@
 const std = @import("std");
 const cap = @import("capture");
 
-const Packet = cap.Encoder.Packet;
+const Packet = cap.Packet;
 
 const Self = @This();
 

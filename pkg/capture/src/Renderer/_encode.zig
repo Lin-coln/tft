@@ -2,10 +2,9 @@ const macos = @import("macos");
 
 const Self = @import("Self.zig");
 const Worker = Self.Worker;
-const WorkerFlag = @import("tft/pipeline").Worker.Flag;
 const Frame = Self.Frame;
-const Encoder = @import("../Encoder/Self.zig");
-const Packet = Encoder.Packet;
+const Encoder = Self.Encoder;
+const Packet = @import("tft/stream").Packet;
 
 const cm = macos.CoreMedia;
 
@@ -30,7 +29,7 @@ fn mergeFrames(last: **Frame, frame: *Frame) !void {
     frame.destroy();
 }
 
-fn handleExecuteFrame(self: *Self, frame: *Frame, flag: WorkerFlag) void {
+fn handleExecuteFrame(self: *Self, frame: *Frame, flag: Worker.Flag) void {
     switch (flag) {
         .execute => self.encoder.encode(frame) catch |err| {
             handleEncodeError(self, err);
@@ -39,23 +38,21 @@ fn handleExecuteFrame(self: *Self, frame: *Frame, flag: WorkerFlag) void {
     }
 }
 
-fn handleEncodeError(ctx: *anyopaque, err: anyerror) void {
-    const self: *Self = @ptrCast(@alignCast(ctx));
+fn handleEncodeError(self: *Self, err: anyerror) void {
     _ = self;
     @panic(@errorName(err));
 }
 
 fn handleEncodeOutput(
-    ctx: *anyopaque,
+    self: *Self,
     borrowed: *Frame,
     sample_buffer: cm.CMSampleBufferRef,
 ) !void {
-    const self: *Self = @ptrCast(@alignCast(ctx));
-    const packet = try Packet.fromSampleBuffer(
-        self.allocator,
-        borrowed,
-        sample_buffer,
-    );
+    const packet = try Packet.fromSampleBuffer(self.allocator, .{
+        .pts = borrowed.pts,
+        .duration = borrowed.duration,
+        .sample_buffer = sample_buffer,
+    });
     defer packet.release();
 
     self.handle_output(self.ctx, packet);

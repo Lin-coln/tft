@@ -1,17 +1,19 @@
 const std = @import("std");
 const Capture = @import("tft/capture").Capture;
 
+const Allocator = std.mem.Allocator;
+
 pub const Frame = @import("Frame.zig");
 const Surface = @import("Surface.zig");
-const Encoder = @import("../Encoder/Self.zig");
-const Packet = Encoder.Packet;
 const Scaler = @import("Scaler.zig");
+const Packet = @import("tft/stream").Packet;
 
 const Self = @This();
 const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
 pub const Worker = @import("tft/pipeline").Worker.Of(*Self, *Frame);
+pub const Encoder = @import("tft/stream").Encoder.Of(*Self, Frame);
 
-allocator: std.mem.Allocator,
+allocator: Allocator,
 driver: *Driver,
 
 capture: *Capture,
@@ -32,7 +34,7 @@ pub const Options = struct {
     framerate: u32,
     handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
 };
-pub fn init(allocator: std.mem.Allocator, opts: Options) !*Self {
+pub fn init(allocator: Allocator, opts: Options) !*Self {
     if (opts.framerate == 0 or opts.framerate > std.time.ns_per_s)
         return error.InvalidFramerate;
 

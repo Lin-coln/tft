@@ -1,7 +1,7 @@
 const cap = @import("capture");
 const Self = @import("Self.zig");
 
-const Packet = cap.Encoder.Packet;
+const Packet = cap.Packet;
 const StreamOutputContext = Self.StreamOutputContext;
 
 pub fn onReceivePacket(ctx: *anyopaque, borrowed: *Packet) void {

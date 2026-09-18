@@ -5,7 +5,7 @@ const Queue = @import("Queue.zig");
 
 const Capture = @import("tft/capture").Capture;
 const Renderer = cap.Renderer;
-const Packet = cap.Encoder.Packet;
+const Packet = cap.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
 const PngEncoder = @import("../target/PngEncoder.zig");
 
