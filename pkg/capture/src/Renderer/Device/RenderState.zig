@@ -4,9 +4,11 @@ const objc = @import("objc");
 const Texture = @import("tft/stream").Texture;
 
 const Shader = @import("tft/stream").Device.Shader.Of(
-    enum { draw_source },
+    enum { vertex_quad, draw_background, draw_source },
     .{
-        .draw_source = .kernel,
+        .vertex_quad = .vertex,
+        .draw_background = .fragment,
+        .draw_source = .fragment,
     },
 );
 
@@ -41,7 +43,7 @@ pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: u
         .width = width,
         .height = height,
         .pixel_format = mtl.MTLPixelFormatBGRA8Unorm,
-        .usage = mtl.MTLTextureUsageShaderWrite | mtl.MTLTextureUsageShaderRead,
+        .usage = mtl.MTLTextureUsageRenderTarget | mtl.MTLTextureUsageShaderRead,
         .storage_mode = mtl.MTLStorageModePrivate,
     });
     errdefer self.target.?.release();
@@ -49,8 +51,13 @@ pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: u
 }
 
 pub fn destroy(self: *Self) void {
-    if (self.command_buffer) |command_buffer| command_buffer.release();
+    self.resetCommands();
     if (self.target) |target| target.release();
     self.shader_draw.destroy();
     self.allocator.destroy(self);
+}
+
+pub fn resetCommands(self: *Self) void {
+    if (self.command_buffer) |command_buffer| command_buffer.release();
+    self.command_buffer = null;
 }

@@ -4,6 +4,7 @@ const cv = macos.CoreVideo;
 const ios = macos.IOSurface;
 const mtl = macos.Metal;
 const Texture = @import("tft/stream").Texture;
+const Device = @import("Device/Self.zig");
 
 const Self = @import("Self.zig");
 const Frame = Self.Frame;
@@ -29,13 +30,8 @@ fn handleDriveLoop(
             .storage_mode = mtl.MTLStorageModeShared,
         }) catch break :block null;
         defer source.release();
-        const state = self.device.render_state;
-        const center: @Vector(2, f32) = .{
-            @as(f32, @floatFromInt(state.width)) / 2,
-            @as(f32, @floatFromInt(state.height)) / 2,
-        };
-        self.device.draw(source, center) catch break :block null;
-        const image_buffer = self.device.render() catch break :block null;
+        const device = self.device;
+        const image_buffer = renderCaptured(device, source) catch break :block null;
         break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
     };
 
@@ -70,4 +66,16 @@ fn handleDriveLoop(
     } else {
         return null;
     }
+}
+
+fn renderCaptured(device: *Device, source: *Texture) !cv.CVImageBufferRef {
+    const state = device.render_state;
+    const center: @Vector(2, f32) = .{
+        @as(f32, @floatFromInt(state.width)) / 2,
+        @as(f32, @floatFromInt(state.height)) / 2,
+    };
+    try device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 });
+    errdefer state.resetCommands();
+    try device.drawSource(source, center);
+    return try device.render();
 }

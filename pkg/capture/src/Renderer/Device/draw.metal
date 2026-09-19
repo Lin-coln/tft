@@ -1,20 +1,25 @@
 #include <metal_stdlib>
 using namespace metal;
 
-struct Params { float2 origin; float2 size; float4 background; };
+struct Quad { float2 origin; float2 size; float2 canvas; };
+struct VertexOut { float4 position [[position]]; float2 uv; };
 
-kernel void draw_source(
-    texture2d<float, access::sample> source [[texture(0)]],
-    texture2d<float, access::write> target [[texture(1)]],
-    constant Params &params [[buffer(0)]],
-    uint2 position [[thread_position_in_grid]])
-{
-    if (position.x >= target.get_width() || position.y >= target.get_height()) return;
-    float2 uv = (float2(position) + 0.5 - params.origin) / params.size;
-    if (any(uv < 0.0) || any(uv > 1.0)) {
-        target.write(params.background, position);
-        return;
-    }
+vertex VertexOut vertex_quad(uint id [[vertex_id]], constant Quad &quad [[buffer(0)]]) {
+    float2 uv = float2(id & 1, (id >> 1) & 1);
+    float2 pixel = quad.origin + uv * quad.size;
+    VertexOut out;
+    out.position = float4(pixel.x / quad.canvas.x * 2.0 - 1.0,
+                          1.0 - pixel.y / quad.canvas.y * 2.0, 0.0, 1.0);
+    out.uv = uv;
+    return out;
+}
+
+fragment float4 draw_background(VertexOut in [[stage_in]], constant float4 &color [[buffer(0)]]) {
+    (void)in;
+    return color;
+}
+
+fragment float4 draw_source(VertexOut in [[stage_in]], texture2d<float, access::sample> source [[texture(0)]]) {
     constexpr sampler linear_sampler(coord::normalized, address::clamp_to_edge, filter::linear);
-    target.write(source.sample(linear_sampler, uv), position);
+    return source.sample(linear_sampler, in.uv);
 }
