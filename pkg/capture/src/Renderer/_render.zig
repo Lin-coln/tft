@@ -20,7 +20,7 @@ pub fn render(device: *Device, source: *Texture) !cv.CVImageBufferRef {
     defer autorelease_pool.deinit();
 
     var buffer_ref: ?cv.CVPixelBufferRef = null;
-    if (cv.CVPixelBufferPoolCreatePixelBuffer(null, state.pixel_pool, &buffer_ref) != 0)
+    if (cv.CVPixelBufferPoolCreatePixelBuffer(null, device.pixel_pool, &buffer_ref) != 0)
         return error.PixelBufferCreationFailed;
     const image_buffer = buffer_ref orelse return error.PixelBufferCreationFailed;
     errdefer cf.CFRelease(@ptrCast(image_buffer));
@@ -28,7 +28,7 @@ pub fn render(device: *Device, source: *Texture) !cv.CVImageBufferRef {
     var texture_ref: ?cv.CVMetalTextureRef = null;
     if (cv.CVMetalTextureCacheCreateTextureFromImage(
         null,
-        state.texture_cache,
+        device.texture_cache,
         image_buffer,
         null,
         mtl.MTLPixelFormatBGRA8Unorm,
