@@ -27,7 +27,7 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
 
     var pipeline_error: objc.c.id = null;
     const pipeline_draw = device.msgSend(objc.Object, "newComputePipelineStateWithFunction:error:", .{
-        render_state.shader_draw.function.*, &pipeline_error,
+        render_state.shader_draw.function("draw_source"), &pipeline_error,
     });
     if (pipeline_draw.value == null) return error.PipelineCreationFailed;
     errdefer pipeline_draw.release();
