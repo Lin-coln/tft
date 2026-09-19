@@ -29,7 +29,13 @@ fn handleDriveLoop(
             .storage_mode = mtl.MTLStorageModeShared,
         }) catch break :block null;
         defer source.release();
-        const image_buffer = @import("_render.zig").render(self.device, source) catch break :block null;
+        const state = self.device.render_state;
+        const center: @Vector(2, f32) = .{
+            @as(f32, @floatFromInt(state.width)) / 2,
+            @as(f32, @floatFromInt(state.height)) / 2,
+        };
+        self.device.draw(source, center) catch break :block null;
+        const image_buffer = self.device.render() catch break :block null;
         break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
     };
 

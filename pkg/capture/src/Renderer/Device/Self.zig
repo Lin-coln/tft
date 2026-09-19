@@ -1,11 +1,13 @@
 const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
-const RenderState = @import("RenderState.zig");
 
 const Allocator = std.mem.Allocator;
 const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
+
+const RenderState = @import("RenderState.zig");
+
 const Self = @This();
 
 extern fn MTLCreateSystemDefaultDevice() callconv(.c) objc.c.id;
@@ -17,6 +19,9 @@ pipeline_draw: objc.Object = undefined,
 pixel_pool: cv.CVPixelBufferPoolRef = undefined,
 texture_cache: cv.CVMetalTextureCacheRef = undefined,
 render_state: *RenderState = undefined,
+
+pub const draw = @import("draw.zig").draw;
+pub const render = @import("render.zig").render;
 
 pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     const self = try allocator.create(Self);

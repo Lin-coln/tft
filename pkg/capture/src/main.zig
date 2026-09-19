@@ -6,6 +6,6 @@ pub const ResolveConfig = @import("tft/stream").ResolveConfig;
 test {
     _ = Renderer;
 
-    _ = @import("Renderer/_render.zig");
+    _ = @import("Renderer/Device/render.zig");
     _ = @import("Renderer/Device/RenderState.zig");
 }
