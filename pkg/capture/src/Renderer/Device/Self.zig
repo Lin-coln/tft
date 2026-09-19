@@ -5,22 +5,22 @@ const objc = @import("objc");
 const Allocator = std.mem.Allocator;
 const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
-const mtl = macos.Metal;
+
+extern fn MTLCreateSystemDefaultDevice() callconv(.c) objc.c.id;
 
 const RenderState = @import("RenderState.zig");
 
 const Self = @This();
-
-extern fn MTLCreateSystemDefaultDevice() callconv(.c) objc.c.id;
+const initPipelines = @import("getPipelineByDesc.zig").initPipelines;
+const deinitPipelines = @import("getPipelineByDesc.zig").deinitPipelines;
 
 allocator: Allocator,
-device: objc.Object = undefined,
-command_queue: objc.Object = undefined,
-pipeline_background: objc.Object = undefined,
-pipeline_source: objc.Object = undefined,
-pixel_pool: cv.CVPixelBufferPoolRef = undefined,
-texture_cache: cv.CVMetalTextureCacheRef = undefined,
-render_state: *RenderState = undefined,
+device: objc.Object,
+command_queue: objc.Object,
+pipelines: std.AutoHashMap(usize, objc.Object),
+pixel_pool: cv.CVPixelBufferPoolRef,
+texture_cache: cv.CVMetalTextureCacheRef,
+render_state: *RenderState,
 
 pub const drawBackground = @import("drawBackground.zig").drawBackground;
 pub const drawSource = @import("drawSource.zig").drawSource;
@@ -41,22 +41,11 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     };
     errdefer self.command_queue.release();
 
+    self.pipelines = initPipelines(self);
+    errdefer deinitPipelines(self);
+
     self.render_state = try RenderState.create(allocator, self.device, width, height);
     errdefer self.render_state.destroy();
-
-    self.pipeline_background = try createPipeline(
-        self.device,
-        self.render_state.shader_draw.function(.vertex_quad),
-        self.render_state.shader_draw.function(.draw_background),
-    );
-    errdefer self.pipeline_background.release();
-
-    self.pipeline_source = try createPipeline(
-        self.device,
-        self.render_state.shader_draw.function(.vertex_quad),
-        self.render_state.shader_draw.function(.draw_source),
-    );
-    errdefer self.pipeline_source.release();
 
     self.pixel_pool = try createPixelPool(width, height);
     errdefer cf.CFRelease(@ptrCast(self.pixel_pool));
@@ -74,36 +63,11 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
 pub fn destroy(self: *Self) void {
     cf.CFRelease(@ptrCast(self.texture_cache));
     cf.CFRelease(@ptrCast(self.pixel_pool));
-    self.pipeline_source.release();
-    self.pipeline_background.release();
+    deinitPipelines(self);
     self.render_state.destroy();
     self.command_queue.release();
     self.device.release();
     self.allocator.destroy(self);
-}
-
-fn createPipeline(device: objc.Object, vertex: objc.Object, fragment: objc.Object) !objc.Object {
-    const desc = blk: {
-        const value = objc.getClass("MTLRenderPipelineDescriptor").?.msgSend(objc.Object, "new", .{});
-        if (value.value == null) return error.PipelineDescriptorCreationFailed;
-        break :blk value;
-    };
-    defer desc.release();
-
-    desc.setProperty("vertexFunction", vertex);
-    desc.setProperty("fragmentFunction", fragment);
-    const attachments = desc.getProperty(objc.Object, "colorAttachments");
-    const color = attachments.msgSend(objc.Object, "objectAtIndexedSubscript:", .{@as(usize, 0)});
-    color.setProperty("pixelFormat", mtl.MTLPixelFormatBGRA8Unorm);
-
-    var pipeline_error: objc.c.id = null;
-    const pipeline = blk: {
-        const value = device.msgSend(objc.Object, "newRenderPipelineStateWithDescriptor:error:", .{ desc, &pipeline_error });
-        if (value.value == null) return error.PipelineCreationFailed;
-        break :blk value;
-    };
-    errdefer pipeline.release();
-    return pipeline;
 }
 
 fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
