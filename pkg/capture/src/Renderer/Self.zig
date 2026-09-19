@@ -1,10 +1,11 @@
 const std = @import("std");
 const Capture = @import("tft/capture").Capture;
+const Texture = @import("tft/stream").Texture;
 
 const Allocator = std.mem.Allocator;
 
 const cv = @import("macos").CoreVideo;
-const Scaler = @import("Scaler.zig");
+const Device = @import("Device/Self.zig");
 const Driver = @import("_driver.zig").Driver;
 const _encode = @import("_encode.zig");
 
@@ -21,9 +22,10 @@ capture: *Capture,
 frame_last: ?cv.CVImageBufferRef,
 frame_last_mutex: std.Io.Mutex,
 
+device: *Device,
+
 encode_worker: *_encode.Worker,
 encoder: *_encode.Encoder,
-scaler: *Scaler,
 
 ctx: *anyopaque,
 handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
@@ -46,11 +48,11 @@ pub fn init(
     self.* = .{
         .allocator = allocator,
         .driver = undefined,
-        .encode_worker = undefined,
-        .encoder = undefined,
-        .scaler = undefined,
+        .device = undefined,
         .frame_last = null,
         .frame_last_mutex = .init,
+        .encode_worker = undefined,
+        .encoder = undefined,
         .capture = opts.capture,
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
@@ -64,8 +66,8 @@ pub fn init(
     self.encoder = try _encode.createEncoder(self);
     errdefer self.encoder.destroy();
 
-    self.scaler = try .init(allocator, 1920, 1080);
-    errdefer self.scaler.deinit();
+    self.device = try Device.create(allocator, 1920, 1080);
+    errdefer self.device.destroy();
 
     self.encode_worker = try _encode.createWorker(self);
     errdefer self.encode_worker.destroy();
@@ -86,6 +88,6 @@ pub fn deinit(self: *Self) void {
     self.encode_worker.destroy();
     self.encoder.destroy();
     cv.CVBufferRelease(self.frame_last);
-    self.scaler.deinit();
+    self.device.destroy();
     self.allocator.destroy(self);
 }

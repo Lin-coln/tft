@@ -1,5 +1,8 @@
 const std = @import("std");
-const cv = @import("macos").CoreVideo;
+const macos = @import("macos");
+const cv = macos.CoreVideo;
+const metal = macos.Metal;
+const Texture = @import("tft/stream").Texture;
 
 const Self = @import("Self.zig");
 const Frame = Self.Frame;
@@ -16,7 +19,16 @@ fn handleLoop(
     var frame: ?*Frame = block: {
         const surface = self.capture.get_surface() orelse break :block null;
         defer surface.deinit();
-        const image_buffer = self.scaler.render(surface.ref) catch break :block null;
+        const source = Texture.fromIOSurface(self.allocator, .{
+            .device = self.device.device,
+            .width = macos.IOSurface.IOSurfaceGetWidth(surface.ref),
+            .height = macos.IOSurface.IOSurfaceGetHeight(surface.ref),
+            .surface = surface.ref,
+            .usage = metal.MTLTextureUsageShaderRead,
+            .storage_mode = metal.MTLStorageModeShared,
+        }) catch break :block null;
+        defer source.release();
+        const image_buffer = @import("_render.zig").render(self.device, source) catch break :block null;
         break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
     };
 
