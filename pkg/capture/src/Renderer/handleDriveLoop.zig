@@ -1,15 +1,16 @@
 const std = @import("std");
 const macos = @import("macos");
 const cv = macos.CoreVideo;
-const metal = macos.Metal;
+const ios = macos.IOSurface;
+const mtl = macos.Metal;
 const Texture = @import("tft/stream").Texture;
 
 const Self = @import("Self.zig");
 const Frame = Self.Frame;
 
-pub const Driver = @import("tft/pipeline").Driver.Of(Self, handleLoop);
+pub const Driver = @import("tft/pipeline").Driver.Of(Self, handleDriveLoop);
 
-fn handleLoop(
+fn handleDriveLoop(
     self: *Self,
     ts: std.Io.Clock.Timestamp,
 ) ?std.Io.Duration {
@@ -21,11 +22,11 @@ fn handleLoop(
         defer surface.deinit();
         const source = Texture.fromIOSurface(self.allocator, .{
             .device = self.device.device,
-            .width = macos.IOSurface.IOSurfaceGetWidth(surface.ref),
-            .height = macos.IOSurface.IOSurfaceGetHeight(surface.ref),
+            .width = ios.IOSurfaceGetWidth(surface.ref),
+            .height = ios.IOSurfaceGetHeight(surface.ref),
             .surface = surface.ref,
-            .usage = metal.MTLTextureUsageShaderRead,
-            .storage_mode = metal.MTLStorageModeShared,
+            .usage = mtl.MTLTextureUsageShaderRead,
+            .storage_mode = mtl.MTLStorageModeShared,
         }) catch break :block null;
         defer source.release();
         const image_buffer = @import("_render.zig").render(self.device, source) catch break :block null;

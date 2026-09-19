@@ -15,38 +15,37 @@ const cv = macos.CoreVideo;
 const Self = @This();
 
 allocator: Allocator,
-shader_draw: *Shader,
+shader_draw: *Shader = undefined,
 background: @Vector(4, f32),
-pixel_pool: cv.CVPixelBufferPoolRef,
-texture_cache: cv.CVMetalTextureCacheRef,
+pixel_pool: cv.CVPixelBufferPoolRef = undefined,
+texture_cache: cv.CVMetalTextureCacheRef = undefined,
 width: usize,
 height: usize,
 
 pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: usize) !*Self {
     if (width == 0 or height == 0) return error.InvalidDimensions;
-    const shader_draw = try Shader.create(allocator, device, @embedFile("draw.metal"));
-    errdefer shader_draw.destroy();
-
-    const pixel_pool = try createPixelPool(width, height);
-    errdefer cf.CFRelease(@ptrCast(pixel_pool));
-
-    var cache_ref: ?cv.CVMetalTextureCacheRef = null;
-    if (cv.CVMetalTextureCacheCreate(null, null, device.value.?, null, &cache_ref) != 0)
-        return error.TextureCacheCreationFailed;
-    const texture_cache = cache_ref orelse return error.TextureCacheCreationFailed;
-    errdefer cf.CFRelease(@ptrCast(texture_cache));
-
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
     self.* = .{
         .allocator = allocator,
-        .shader_draw = shader_draw,
         .background = .{ 0.5, 0.5, 0.5, 1.0 },
-        .pixel_pool = pixel_pool,
-        .texture_cache = texture_cache,
         .width = width,
         .height = height,
     };
+
+    self.shader_draw = try Shader.create(allocator, device, @embedFile("draw.metal"));
+    errdefer self.shader_draw.destroy();
+
+    self.pixel_pool = try createPixelPool(width, height);
+    errdefer cf.CFRelease(@ptrCast(self.pixel_pool));
+
+    self.texture_cache = blk: {
+        var cache_ref: ?cv.CVMetalTextureCacheRef = null;
+        if (cv.CVMetalTextureCacheCreate(null, null, device.value.?, null, &cache_ref) != 0)
+            return error.TextureCacheCreationFailed;
+        break :blk cache_ref orelse return error.TextureCacheCreationFailed;
+    };
+    errdefer cf.CFRelease(@ptrCast(self.texture_cache));
     return self;
 }
 

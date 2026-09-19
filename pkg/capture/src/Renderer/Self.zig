@@ -1,12 +1,13 @@
 const std = @import("std");
+const macos = @import("macos");
 const Capture = @import("tft/capture").Capture;
-const Texture = @import("tft/stream").Texture;
 
 const Allocator = std.mem.Allocator;
 
-const cv = @import("macos").CoreVideo;
+const cv = macos.CoreVideo;
+
 const Device = @import("Device/Self.zig");
-const Driver = @import("_driver.zig").Driver;
+const Driver = @import("handleDriveLoop.zig").Driver;
 const _encode = @import("_encode.zig");
 
 pub const Frame = @import("Frame.zig");

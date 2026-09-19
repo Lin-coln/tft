@@ -6,7 +6,7 @@ const Device = @import("Device/Self.zig");
 
 const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
-const metal = macos.Metal;
+const mtl = macos.Metal;
 const Params = extern struct { origin: @Vector(2, f32), size: @Vector(2, f32), background: @Vector(4, f32) };
 
 /// Draws a texture onto the gray render target and produces an owned encoder input buffer.
@@ -31,7 +31,7 @@ pub fn render(device: *Device, source: *Texture) !cv.CVImageBufferRef {
         state.texture_cache,
         image_buffer,
         null,
-        metal.MTLPixelFormatBGRA8Unorm,
+        mtl.MTLPixelFormatBGRA8Unorm,
         state.width,
         state.height,
         0,
@@ -65,8 +65,8 @@ pub fn render(device: *Device, source: *Texture) !cv.CVImageBufferRef {
     draw.msgSend(void, "setTexture:atIndex:", .{ output_obj, @as(usize, 1) });
     draw.msgSend(void, "setBytes:length:atIndex:", .{ &params, @as(usize, @sizeOf(Params)), @as(usize, 0) });
     draw.msgSend(void, "dispatchThreads:threadsPerThreadgroup:", .{
-        metal.MTLSize{ .width = state.width, .height = state.height, .depth = 1 },
-        metal.MTLSize{ .width = 16, .height = 16, .depth = 1 },
+        mtl.MTLSize{ .width = state.width, .height = state.height, .depth = 1 },
+        mtl.MTLSize{ .width = 16, .height = 16, .depth = 1 },
     });
     draw.msgSend(void, "endEncoding", .{});
 
@@ -85,12 +85,15 @@ test "Renderer draws a texture into an encoder buffer" {
     const desc = objc.getClass("MTLTextureDescriptor").?.msgSend(
         objc.Object,
         "texture2DDescriptorWithPixelFormat:width:height:mipmapped:",
-        .{ metal.MTLPixelFormatBGRA8Unorm, @as(usize, 32), @as(usize, 32), false },
+        .{ mtl.MTLPixelFormatBGRA8Unorm, @as(usize, 32), @as(usize, 32), false },
     );
     try std.testing.expect(desc.value != null);
-    desc.msgSend(void, "setUsage:", .{metal.MTLTextureUsageShaderRead});
-    const texture_obj = device.device.msgSend(objc.Object, "newTextureWithDescriptor:", .{desc});
-    try std.testing.expect(texture_obj.value != null);
+    desc.msgSend(void, "setUsage:", .{mtl.MTLTextureUsageShaderRead});
+    const texture_obj = blk: {
+        const value = device.device.msgSend(objc.Object, "newTextureWithDescriptor:", .{desc});
+        if (value.value == null) return error.TextureCreationFailed;
+        break :blk value;
+    };
     defer texture_obj.release();
 
     var texture = Texture{

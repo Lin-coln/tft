@@ -1,17 +1,18 @@
 const std = @import("std");
 const macos = @import("macos");
 const cv = macos.CoreVideo;
+const Allocator = std.mem.Allocator;
 
 const Self = @This();
 
-allocator: std.mem.Allocator,
+allocator: Allocator,
 pts: std.Io.Timestamp,
 duration: std.Io.Duration,
 
 image_buffer: cv.CVImageBufferRef,
 
 pub fn create(
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
     image_buffer: cv.CVImageBufferRef,
     pts: std.Io.Timestamp,
     duration: std.Io.Duration,
