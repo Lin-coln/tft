@@ -1,9 +1,13 @@
 const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
-const Shader = @import("tft/stream").Device.Shader.Of(&.{
-    .{ .name = "draw_source", .type = .kernel },
-});
+
+const Shader = @import("tft/stream").Device.Shader.Of(
+    enum { draw_source },
+    .{
+        .draw_source = .kernel,
+    },
+);
 
 const Allocator = std.mem.Allocator;
 const cf = macos.CoreFoundation;
