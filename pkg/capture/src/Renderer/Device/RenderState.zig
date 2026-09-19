@@ -58,21 +58,21 @@ pub fn destroy(self: *Self) void {
 }
 
 fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
-    const surface_properties = cf.CFDictionaryCreateMutable(
+    const props = cf.CFDictionaryCreateMutable(
         null,
         0,
         &cf.kCFTypeDictionaryKeyCallBacks,
         &cf.kCFTypeDictionaryValueCallBacks,
     ) orelse return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(surface_properties);
+    defer cf.CFRelease(props);
 
-    const attributes = cf.CFDictionaryCreateMutable(
+    const attrs = cf.CFDictionaryCreateMutable(
         null,
         0,
         &cf.kCFTypeDictionaryKeyCallBacks,
         &cf.kCFTypeDictionaryValueCallBacks,
     ) orelse return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(attributes);
+    defer cf.CFRelease(attrs);
 
     const width_value: i64 = @intCast(width);
     const width_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &width_value) orelse
@@ -87,14 +87,14 @@ fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
         return error.PixelBufferAttributesCreationFailed;
     defer cf.CFRelease(@ptrCast(format_number));
 
-    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferWidthKey, width_number);
-    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferHeightKey, height_number);
-    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferPixelFormatTypeKey, format_number);
-    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferMetalCompatibilityKey, cf.kCFBooleanTrue);
-    cf.CFDictionarySetValue(attributes, cv.kCVPixelBufferIOSurfacePropertiesKey, surface_properties);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferWidthKey, width_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferHeightKey, height_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferPixelFormatTypeKey, format_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferMetalCompatibilityKey, cf.kCFBooleanTrue);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferIOSurfacePropertiesKey, props);
 
     var pool_ref: ?cv.CVPixelBufferPoolRef = null;
-    if (cv.CVPixelBufferPoolCreate(null, null, attributes, &pool_ref) != 0)
+    if (cv.CVPixelBufferPoolCreate(null, null, attrs, &pool_ref) != 0)
         return error.PixelBufferPoolCreationFailed;
     const pixel_pool = pool_ref orelse return error.PixelBufferPoolCreationFailed;
     errdefer cf.CFRelease(@ptrCast(pixel_pool));
