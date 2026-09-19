@@ -1,13 +1,36 @@
 const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
+const Shader = @import("Shader.zig");
 
 const Allocator = std.mem.Allocator;
 const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
 const Self = @This();
 
+const shader_source =
+    \\#include <metal_stdlib>
+    \\using namespace metal;
+    \\struct Params { float2 origin; float2 size; float4 background; };
+    \\kernel void draw_source(
+    \\    texture2d<float, access::sample> source [[texture(0)]],
+    \\    texture2d<float, access::write> target [[texture(1)]],
+    \\    constant Params &params [[buffer(0)]],
+    \\    uint2 position [[thread_position_in_grid]])
+    \\{
+    \\    if (position.x >= target.get_width() || position.y >= target.get_height()) return;
+    \\    float2 uv = (float2(position) + 0.5 - params.origin) / params.size;
+    \\    if (any(uv < 0.0) || any(uv > 1.0)) {
+    \\        target.write(params.background, position);
+    \\        return;
+    \\    }
+    \\    constexpr sampler linear_sampler(coord::normalized, address::clamp_to_edge, filter::linear);
+    \\    target.write(source.sample(linear_sampler, uv), position);
+    \\}
+;
+
 allocator: Allocator,
+shader_draw: *Shader,
 background: @Vector(4, f32),
 pixel_pool: cv.CVPixelBufferPoolRef,
 texture_cache: cv.CVMetalTextureCacheRef,
@@ -16,6 +39,13 @@ height: usize,
 
 pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: usize) !*Self {
     if (width == 0 or height == 0) return error.InvalidDimensions;
+    const shader_draw = try Shader.create(allocator, device, .{
+        .source = shader_source,
+        .name = "draw_source",
+        .type = .compute,
+    });
+    errdefer shader_draw.destroy();
+
     const pixel_pool = try createPixelPool(width, height);
     errdefer cf.CFRelease(@ptrCast(pixel_pool));
 
@@ -29,6 +59,7 @@ pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: u
     errdefer allocator.destroy(self);
     self.* = .{
         .allocator = allocator,
+        .shader_draw = shader_draw,
         .background = .{ 0.5, 0.5, 0.5, 1.0 },
         .pixel_pool = pixel_pool,
         .texture_cache = texture_cache,
@@ -41,6 +72,7 @@ pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: u
 pub fn destroy(self: *Self) void {
     cf.CFRelease(@ptrCast(self.texture_cache));
     cf.CFRelease(@ptrCast(self.pixel_pool));
+    self.shader_draw.destroy();
     self.allocator.destroy(self);
 }
 

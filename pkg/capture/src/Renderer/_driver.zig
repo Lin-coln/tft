@@ -37,10 +37,10 @@ fn handleLoop(
     if (frame) |next| next.addDuration(duration);
 
     frame = block: {
-        std.Io.Threaded.mutexLock(&self.frame_last_mutex);
-        defer std.Io.Threaded.mutexUnlock(&self.frame_last_mutex);
+        std.Io.Threaded.mutexLock(&self.img_last_mutext);
+        defer std.Io.Threaded.mutexUnlock(&self.img_last_mutext);
 
-        const prev = self.frame_last;
+        const prev = self.img_last;
         if (frame == null) {
             break :block if (prev) |image_buffer|
                 Frame.create(self.allocator, cv.CVBufferRetain(image_buffer).?, pts, duration) catch null
@@ -48,7 +48,7 @@ fn handleLoop(
                 null;
         }
 
-        self.frame_last = cv.CVBufferRetain(frame.?.image_buffer).?;
+        self.img_last = cv.CVBufferRetain(frame.?.image_buffer).?;
         cv.CVBufferRelease(prev);
         break :block frame;
     };

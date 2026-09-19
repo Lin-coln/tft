@@ -60,7 +60,7 @@ pub fn render(device: *Device, source: *Texture) !cv.CVImageBufferRef {
 
     const draw = command_buffer.getProperty(objc.Object, "computeCommandEncoder");
     if (draw.value == null) return error.CommandEncoderCreationFailed;
-    draw.msgSend(void, "setComputePipelineState:", .{device.draw_pipeline});
+    draw.msgSend(void, "setComputePipelineState:", .{device.pipeline_draw});
     draw.msgSend(void, "setTexture:atIndex:", .{ source.obj, @as(usize, 0) });
     draw.msgSend(void, "setTexture:atIndex:", .{ output_obj, @as(usize, 1) });
     draw.msgSend(void, "setBytes:length:atIndex:", .{ &params, @as(usize, @sizeOf(Params)), @as(usize, 0) });

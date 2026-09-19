@@ -19,8 +19,8 @@ driver: *Driver,
 
 capture: *Capture,
 
-frame_last: ?cv.CVImageBufferRef,
-frame_last_mutex: std.Io.Mutex,
+img_last: ?cv.CVImageBufferRef,
+img_last_mutext: std.Io.Mutex,
 
 device: *Device,
 
@@ -49,8 +49,8 @@ pub fn init(
         .allocator = allocator,
         .driver = undefined,
         .device = undefined,
-        .frame_last = null,
-        .frame_last_mutex = .init,
+        .img_last = null,
+        .img_last_mutext = .init,
         .encode_worker = undefined,
         .encoder = undefined,
         .capture = opts.capture,
@@ -87,7 +87,7 @@ pub fn deinit(self: *Self) void {
     self.driver.destroy();
     self.encode_worker.destroy();
     self.encoder.destroy();
-    cv.CVBufferRelease(self.frame_last);
+    cv.CVBufferRelease(self.img_last);
     self.device.destroy();
     self.allocator.destroy(self);
 }
