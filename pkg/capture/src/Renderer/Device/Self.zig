@@ -29,7 +29,15 @@ pub const render = @import("render.zig").render;
 pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
-    self.* = .{ .allocator = allocator };
+    self.* = .{
+        .allocator = allocator,
+        .device = undefined,
+        .command_queue = undefined,
+        .pipelines = undefined,
+        .pixel_pool = undefined,
+        .texture_cache = undefined,
+        .render_state = undefined,
+    };
 
     self.device = objc.Object.fromId(MTLCreateSystemDefaultDevice() orelse return error.MetalUnavailable).retain();
     errdefer self.device.release();

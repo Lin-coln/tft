@@ -17,10 +17,10 @@ const mtl = macos.Metal;
 const Self = @This();
 
 allocator: Allocator,
-shader_draw: *Shader = undefined,
-desc_ppl_background: objc.Object = undefined,
-desc_ppl_source: objc.Object = undefined,
-desc_render_pass: objc.Object = undefined,
+shader_draw: *Shader,
+desc_ppl_background: objc.Object,
+desc_ppl_source: objc.Object,
+desc_render_pass: objc.Object,
 target: ?*Texture = null,
 command_buffer: ?objc.Object = null,
 background: @Vector(4, f32),
@@ -33,6 +33,12 @@ pub fn create(allocator: Allocator, device: objc.Object, width: usize, height: u
     errdefer allocator.destroy(self);
     self.* = .{
         .allocator = allocator,
+        .shader_draw = undefined,
+        .desc_ppl_background = undefined,
+        .desc_ppl_source = undefined,
+        .desc_render_pass = undefined,
+        .target = null,
+        .command_buffer = null,
         .background = .{ 0.5, 0.5, 0.5, 1.0 },
         .width = width,
         .height = height,
