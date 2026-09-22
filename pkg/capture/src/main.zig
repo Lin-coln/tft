@@ -1,8 +1,7 @@
 pub const Renderer = @import("Renderer/Self.zig");
 
 pub const Packet = @import("Renderer/_encode.zig").Encoder.Packet;
-
-pub const ResolveConfig = @import("tft/stream").ResolveConfig;
+pub const ResolveConfig = @import("Renderer/_encode.zig").Encoder.ResolveConfig;
 
 test {
     _ = Renderer;
