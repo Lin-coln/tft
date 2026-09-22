@@ -4,10 +4,10 @@ const cv = macos.CoreVideo;
 const ios = macos.IOSurface;
 const mtl = macos.Metal;
 const Texture = @import("tft/stream").Texture;
+const Frame = @import("tft/stream").Frame;
 const Device = @import("Device/Self.zig");
 
 const Self = @import("Self.zig");
-const Frame = Self.Frame;
 
 pub const Driver = @import("tft/pipeline").Driver.Of(Self, handleDriveLoop);
 

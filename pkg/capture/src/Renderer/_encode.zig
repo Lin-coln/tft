@@ -1,30 +1,13 @@
-const macos = @import("macos");
-
-const cm = macos.CoreMedia;
-
 const Self = @import("Self.zig");
-const Frame = Self.Frame;
+const Frame = @import("tft/stream").Frame;
 
 pub const Worker = @import("tft/pipeline").Worker.Of(*Self, *Frame);
-pub const Encoder = @import("tft/stream").Encoder.Of(*Self, Frame);
-pub const Packet = @import("tft/stream").Packet;
-pub const ResolveConfig = @import("tft/stream").ResolveConfig;
+pub const Encoder = @import("tft/stream").Encoder.Of(*Self);
 
 pub fn createEncoder(renderer: *Self) !*Encoder {
     const block = struct {
-        fn handleEncodeOutput(
-            self: *Self,
-            borrowed: *Frame,
-            sample_buffer: cm.CMSampleBufferRef,
-        ) !void {
-            const packet = try Packet.fromSampleBuffer(self.allocator, .{
-                .pts = borrowed.pts,
-                .duration = borrowed.duration,
-                .sample_buffer = sample_buffer,
-            });
-            defer packet.release();
-
-            self.handle_output(self.ctx, packet);
+        fn handleEncodeOutput(self: *Self, borrowed: *Encoder.Packet) !void {
+            self.handle_output(self.ctx, borrowed);
         }
     };
     return try Encoder.create(renderer.allocator, .{

@@ -8,10 +8,11 @@ const cv = macos.CoreVideo;
 
 const Device = @import("Device/Self.zig");
 const Driver = @import("handleDriveLoop.zig").Driver;
-const _encode = @import("_encode.zig");
 
-pub const Frame = @import("Frame.zig");
-pub const Packet = _encode.Packet;
+const _encode = @import("_encode.zig");
+const Worker = @import("_encode.zig").Worker;
+const Encoder = @import("_encode.zig").Encoder;
+const Packet = Encoder.Packet;
 
 const Self = @This();
 
@@ -25,8 +26,8 @@ img_last_mutext: std.Io.Mutex,
 
 device: *Device,
 
-encode_worker: *_encode.Worker,
-encoder: *_encode.Encoder,
+encode_worker: *Worker,
+encoder: *Encoder,
 
 ctx: *anyopaque,
 handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
