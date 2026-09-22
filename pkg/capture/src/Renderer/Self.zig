@@ -45,8 +45,8 @@ pub fn init(
 
     self.* = .{
         .allocator = allocator,
-        .driver = undefined,
         .device = undefined,
+        .driver = undefined,
         .img_last = null,
         .img_last_mutext = .init,
         .encoder = undefined,
@@ -54,6 +54,9 @@ pub fn init(
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
     };
+
+    self.device = try Device.create(allocator, 1920, 1080);
+    errdefer self.device.destroy();
 
     self.driver = try Driver.create(allocator, .{
         .ctx = self,
@@ -78,9 +81,6 @@ pub fn init(
         });
     };
     errdefer self.encoder.destroy();
-
-    self.device = try Device.create(allocator, 1920, 1080);
-    errdefer self.device.destroy();
 
     try self.encoder.configure(.{
         .width = 1920,
