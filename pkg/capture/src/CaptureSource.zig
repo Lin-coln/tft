@@ -13,15 +13,22 @@ const Self = @This();
 allocator: Allocator,
 capture: ?*Capture,
 
-pub fn create(allocator: Allocator, opts: struct {
-    target: objc.Object,
-    frame_interval_value: i64,
-    frame_interval_timescale: i32,
-    shows_cursor: bool,
-}) !*Self {
+pub fn create(
+    allocator: Allocator,
+    opts: struct {
+        target: objc.Object,
+        frame_interval_value: i64,
+        frame_interval_timescale: i32,
+        shows_cursor: bool,
+    },
+) !*Self {
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
-    self.* = .{ .allocator = allocator, .capture = undefined };
+    self.* = .{
+        .allocator = allocator,
+        .capture = undefined,
+    };
+
     self.capture = try Capture.init(allocator, .{
         .target = opts.target,
         .frame_interval_value = opts.frame_interval_value,

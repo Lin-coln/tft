@@ -13,26 +13,9 @@ fn handleDriveLoop(
 ) ?std.Io.Duration {
     const pts = ts.raw;
 
-    // render frame
-    var frame: ?*Frame = block: {
-        const texture = (self.source.getTexture(self.device.device) catch break :block null) orelse break :block null;
-        defer texture.release();
-
-        const device = self.device;
-
-        const state = device.render_state;
-
-        device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 }) catch break :block null;
-        const canvas: @Vector(2, f32) = .{ @floatFromInt(state.width), @floatFromInt(state.height) };
-        const center = self.source.calcRect(canvas);
-        device.drawSource(texture, center) catch {
-            state.resetCommands();
-            break :block null;
-        };
-
-        const image_buffer = device.render() catch break :block null;
-        break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
-    };
+    var frame: ?*Frame = if (render(self)) |image_buffer|
+        Frame.create(self.allocator, image_buffer, pts, .zero) catch null
+    else |_| null;
 
     // frame
     const duration = self.driver.calcDuration(ts);
@@ -65,4 +48,22 @@ fn handleDriveLoop(
     } else {
         return null;
     }
+}
+
+fn render(self: *Self) !cv.CVImageBufferRef {
+    const texture = (try self.source.getTexture(self.device.device)) orelse return error.NoSourceTexture;
+    defer texture.release();
+
+    const device = self.device;
+    const state = device.render_state;
+
+    try device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 });
+    const canvas: @Vector(2, f32) = .{ @floatFromInt(state.width), @floatFromInt(state.height) };
+    const center = self.source.calcRect(canvas);
+    device.drawSource(texture, center) catch |err| {
+        state.resetCommands();
+        return err;
+    };
+
+    return device.render();
 }
