@@ -41,3 +41,7 @@ pub fn addDuration(self: *Self, duration: std.Io.Duration) void {
         self.duration.nanoseconds +| duration.nanoseconds,
     );
 }
+
+pub fn getImageBuffer(self: *Self) cv.CVImageBufferRef {
+    return self.image_buffer;
+}

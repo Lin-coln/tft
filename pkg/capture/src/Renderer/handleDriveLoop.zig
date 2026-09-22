@@ -51,7 +51,7 @@ fn handleDriveLoop(
                 null;
         }
 
-        self.img_last = cv.CVBufferRetain(frame.?.image_buffer).?;
+        self.img_last = cv.CVBufferRetain(frame.?.getImageBuffer()).?;
         cv.CVBufferRelease(prev);
         break :block frame;
     };
