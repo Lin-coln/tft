@@ -3,7 +3,7 @@ const napi = @import("napi-zig");
 const cap = @import("capture");
 const Queue = @import("Queue.zig");
 
-const Capture = @import("tft/capture").Capture;
+const CaptureSource = cap.CaptureSource;
 const Renderer = cap.Renderer;
 const Packet = cap.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
@@ -46,7 +46,7 @@ thread: *Thread,
 stream_output: *StreamOutputContext,
 
 window_id: ?u32,
-capture: ?*Capture,
+source: ?*CaptureSource,
 renderer: ?*Renderer,
 
 pub fn init(
@@ -89,7 +89,7 @@ pub fn init(
         .thread = thread,
         .stream_output = stream_output,
         .window_id = null,
-        .capture = null,
+        .source = null,
         .renderer = null,
     };
 }
@@ -104,8 +104,8 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
-    const capture = self.capture orelse return error.TargetUnavailable;
-    const surface = capture.get_surface() orelse return error.SurfaceUnavailable;
+    const source = self.source orelse return error.TargetUnavailable;
+    const surface = source.getSurface() orelse return error.SurfaceUnavailable;
     defer surface.deinit();
 
     const bytes = try self.png_encoder.encode(surface.ref);
@@ -117,9 +117,9 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
 
 fn deinitTarget(self: *Self) void {
     if (self.renderer) |renderer| renderer.deinit();
-    if (self.capture) |capture| capture.deinit();
+    if (self.source) |source| source.destroy();
     self.renderer = null;
-    self.capture = null;
+    self.source = null;
     self.window_id = null;
 }
 

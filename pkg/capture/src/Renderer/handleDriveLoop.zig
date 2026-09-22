@@ -1,11 +1,7 @@
 const std = @import("std");
 const macos = @import("macos");
 const cv = macos.CoreVideo;
-const ios = macos.IOSurface;
-const mtl = macos.Metal;
-const Texture = @import("tft/stream").Texture;
 const Frame = @import("tft/stream").Frame;
-const Device = @import("Device/Self.zig");
 
 const Self = @import("Self.zig");
 
@@ -19,19 +15,22 @@ fn handleDriveLoop(
 
     // render frame
     var frame: ?*Frame = block: {
-        const surface = self.capture.get_surface() orelse break :block null;
-        defer surface.deinit();
-        const source = Texture.fromIOSurface(self.allocator, .{
-            .device = self.device.device,
-            .width = ios.IOSurfaceGetWidth(surface.ref),
-            .height = ios.IOSurfaceGetHeight(surface.ref),
-            .surface = surface.ref,
-            .usage = mtl.MTLTextureUsageShaderRead,
-            .storage_mode = mtl.MTLStorageModeShared,
-        }) catch break :block null;
-        defer source.release();
+        const texture = (self.source.getTexture(self.device.device) catch break :block null) orelse break :block null;
+        defer texture.release();
+
         const device = self.device;
-        const image_buffer = renderCaptured(device, source) catch break :block null;
+
+        const state = device.render_state;
+
+        device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 }) catch break :block null;
+        const canvas: @Vector(2, f32) = .{ @floatFromInt(state.width), @floatFromInt(state.height) };
+        const center = self.source.calcRect(canvas);
+        device.drawSource(texture, center) catch {
+            state.resetCommands();
+            break :block null;
+        };
+
+        const image_buffer = device.render() catch break :block null;
         break :block Frame.create(self.allocator, image_buffer, pts, .zero) catch null;
     };
 
@@ -66,16 +65,4 @@ fn handleDriveLoop(
     } else {
         return null;
     }
-}
-
-fn renderCaptured(device: *Device, source: *Texture) !cv.CVImageBufferRef {
-    const state = device.render_state;
-    const center: @Vector(2, f32) = .{
-        @as(f32, @floatFromInt(state.width)) / 2,
-        @as(f32, @floatFromInt(state.height)) / 2,
-    };
-    try device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 });
-    errdefer state.resetCommands();
-    try device.drawSource(source, center);
-    return try device.render();
 }

@@ -1,6 +1,6 @@
 const std = @import("std");
 const macos = @import("macos");
-const Capture = @import("tft/capture").Capture;
+const CaptureSource = @import("../CaptureSource.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -16,7 +16,7 @@ const Packet = Encoder.Packet;
 allocator: Allocator,
 driver: *Driver,
 
-capture: *Capture,
+source: *CaptureSource,
 
 img_last: ?cv.CVImageBufferRef,
 img_last_mutext: std.Io.Mutex,
@@ -32,7 +32,7 @@ pub fn init(
     allocator: Allocator,
     opts: struct {
         ctx: *anyopaque,
-        capture: *Capture,
+        source: *CaptureSource,
         framerate: u32,
         handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
     },
@@ -50,7 +50,7 @@ pub fn init(
         .img_last = null,
         .img_last_mutext = .init,
         .encoder = undefined,
-        .capture = opts.capture,
+        .source = opts.source,
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
     };

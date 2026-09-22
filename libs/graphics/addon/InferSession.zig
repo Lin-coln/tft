@@ -1,7 +1,7 @@
 const std = @import("std");
 const Infer = @import("vision").Infer;
 
-const Capture = @import("tft/capture").Capture;
+const CaptureSource = @import("capture").CaptureSource;
 const dispatch = std.c.dispatch;
 const log = std.log.scoped(.infer_session);
 const Self = @This();
@@ -12,8 +12,8 @@ worker: *Worker,
 pub const Options = struct {
     /// Must allow allocation/free from different threads.
     allocator: std.mem.Allocator,
-    /// Borrowed. Destroy the session before destroying Capture.
-    capture: *Capture,
+    /// Borrowed. Destroy the session before destroying CaptureSource.
+    source: *CaptureSource,
 };
 
 pub fn init(options: Options) !Self {
@@ -22,7 +22,7 @@ pub fn init(options: Options) !Self {
 
     worker.* = .{
         .allocator = options.allocator,
-        .capture = options.capture,
+        .source = options.source,
         .infer = try Infer.init(.{ .allocator = options.allocator }),
         .wake = undefined,
         .stopping = .init(false),
@@ -52,7 +52,7 @@ pub fn deinit(self: Self) void {
 // Screenshot/InferSession values may move during construction and N-API wrapping.
 const Worker = struct {
     allocator: std.mem.Allocator,
-    capture: *Capture,
+    source: *CaptureSource,
     infer: *Infer,
     wake: dispatch.semaphore_t,
     stopping: std.atomic.Value(bool),
@@ -72,7 +72,7 @@ fn run(worker: *Worker) void {
 }
 
 fn inferLatest(worker: *Worker) !void {
-    const surface = worker.capture.get_surface() orelse return;
+    const surface = worker.source.getSurface() orelse return;
     defer surface.deinit();
 
     const results = try worker.infer.run(.{ .io_surface = surface.ref }, .{});
@@ -90,11 +90,9 @@ fn inferLatest(worker: *Worker) !void {
 }
 
 test "session value can move and stop without a surface" {
-    var capture: Capture = undefined;
-    capture.output_mutex = .init;
-    capture.surface = null;
+    var source: CaptureSource = .{ .allocator = std.testing.allocator, .capture = null };
 
-    const session = try Self.init(.{ .allocator = std.testing.allocator, .capture = &capture });
+    const session = try Self.init(.{ .allocator = std.testing.allocator, .source = &source });
     // Put the returned value in another owner, as Screenshot.init does.
     const owner = struct { session: Self }{ .session = session };
     const io = std.Io.Threaded.global_single_threaded.io();
@@ -109,9 +107,7 @@ test "allocation failures clean up the session and infer instance" {
 }
 
 fn initAndDeinit(allocator: std.mem.Allocator) !void {
-    var capture: Capture = undefined;
-    capture.output_mutex = .init;
-    capture.surface = null;
-    const session = try Self.init(.{ .allocator = allocator, .capture = &capture });
+    var source: CaptureSource = .{ .allocator = allocator, .capture = null };
+    const session = try Self.init(.{ .allocator = allocator, .source = &source });
     session.deinit();
 }
