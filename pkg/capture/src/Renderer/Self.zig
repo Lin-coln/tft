@@ -9,11 +9,9 @@ const cv = macos.CoreVideo;
 const Device = @import("Device/Self.zig");
 const Driver = @import("handleDriveLoop.zig").Driver;
 
-const _encode = @import("_encode.zig");
-const Encoder = @import("_encode.zig").Encoder;
-const Packet = Encoder.Packet;
-
 const Self = @This();
+const Encoder = @import("tft/stream").Encoder.Of(*Self);
+const Packet = Encoder.Packet;
 
 allocator: Allocator,
 driver: *Driver,
@@ -56,13 +54,29 @@ pub fn init(
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
     };
+
     self.driver = try Driver.create(allocator, .{
         .ctx = self,
         .interval = .fromNanoseconds(std.time.ns_per_s / opts.framerate),
     });
     errdefer self.driver.destroy();
 
-    self.encoder = try _encode.createEncoder(self);
+    self.encoder = block: {
+        const Handler = struct {
+            fn handleOutput(renderer: *Self, borrowed: *Packet) !void {
+                renderer.handle_output(renderer.ctx, borrowed);
+            }
+            fn handleError(_: *Self, err: anyerror) void {
+                @panic(@errorName(err));
+            }
+        };
+        break :block try Encoder.create(allocator, .{
+            .ctx = self,
+            .capacity = 6,
+            .handle_error = Handler.handleError,
+            .handle_output = Handler.handleOutput,
+        });
+    };
     errdefer self.encoder.destroy();
 
     self.device = try Device.create(allocator, 1920, 1080);
