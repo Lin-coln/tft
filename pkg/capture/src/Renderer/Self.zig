@@ -10,7 +10,6 @@ const Device = @import("Device/Self.zig");
 const Driver = @import("handleDriveLoop.zig").Driver;
 
 const _encode = @import("_encode.zig");
-const Worker = @import("_encode.zig").Worker;
 const Encoder = @import("_encode.zig").Encoder;
 const Packet = Encoder.Packet;
 
@@ -26,7 +25,6 @@ img_last_mutext: std.Io.Mutex,
 
 device: *Device,
 
-encode_worker: *Worker,
 encoder: *Encoder,
 
 ctx: *anyopaque,
@@ -53,7 +51,6 @@ pub fn init(
         .device = undefined,
         .img_last = null,
         .img_last_mutext = .init,
-        .encode_worker = undefined,
         .encoder = undefined,
         .capture = opts.capture,
         .ctx = opts.ctx,
@@ -71,15 +68,12 @@ pub fn init(
     self.device = try Device.create(allocator, 1920, 1080);
     errdefer self.device.destroy();
 
-    self.encode_worker = try _encode.createWorker(self);
-    errdefer self.encode_worker.destroy();
-
     try self.encoder.configure(.{
         .width = 1920,
         .height = 1080,
         .framerate = @intCast(opts.framerate),
     });
-    try self.encode_worker.start();
+    try self.encoder.start();
     try self.driver.start();
 
     return self;
@@ -87,7 +81,6 @@ pub fn init(
 
 pub fn deinit(self: *Self) void {
     self.driver.destroy();
-    self.encode_worker.destroy();
     self.encoder.destroy();
     cv.CVBufferRelease(self.img_last);
     self.device.destroy();

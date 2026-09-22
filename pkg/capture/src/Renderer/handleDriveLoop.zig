@@ -58,8 +58,8 @@ fn handleDriveLoop(
 
     // output
     if (frame) |next| {
-        self.encode_worker.post(next) catch |err| {
-            std.log.err("frame worker post failed: {s}", .{@errorName(err)});
+        self.encoder.post(next) catch |err| {
+            std.log.err("frame post failed: {s}", .{@errorName(err)});
             next.destroy();
         };
         return duration;
