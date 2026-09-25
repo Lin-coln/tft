@@ -9,15 +9,23 @@ const cv = macos.CoreVideo;
 extern fn MTLCreateSystemDefaultDevice() callconv(.c) objc.c.id;
 
 const RenderState = @import("RenderState.zig");
+const PipelinePool = @import("tft/stream").Device.PipelinePool;
 
 const Self = @This();
-const initPipelines = @import("getPipelineByDesc.zig").initPipelines;
-const deinitPipelines = @import("getPipelineByDesc.zig").deinitPipelines;
+const Shader = @import("tft/stream").Device.Shader.Of(
+    enum { vertex_quad, draw_background, draw_source },
+    .{
+        .vertex_quad = .vertex,
+        .draw_background = .fragment,
+        .draw_source = .fragment,
+    },
+);
 
 allocator: Allocator,
 device: objc.Object,
 command_queue: objc.Object,
-pipelines: std.AutoHashMap(usize, objc.Object),
+pipeline_pool: *PipelinePool,
+shader_draw: *Shader,
 pixel_pool: cv.CVPixelBufferPoolRef,
 texture_cache: cv.CVMetalTextureCacheRef,
 render_state: *RenderState,
@@ -33,7 +41,8 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
         .allocator = allocator,
         .device = undefined,
         .command_queue = undefined,
-        .pipelines = undefined,
+        .pipeline_pool = undefined,
+        .shader_draw = undefined,
         .pixel_pool = undefined,
         .texture_cache = undefined,
         .render_state = undefined,
@@ -49,8 +58,11 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     };
     errdefer self.command_queue.release();
 
-    self.pipelines = initPipelines(self);
-    errdefer deinitPipelines(self);
+    self.pipeline_pool = try PipelinePool.create(allocator, self.device);
+    errdefer self.pipeline_pool.destroy();
+
+    self.shader_draw = try Shader.create(allocator, self.device, @embedFile("draw.metal"));
+    errdefer self.shader_draw.destroy();
 
     self.render_state = try RenderState.create(allocator, self.device, width, height);
     errdefer self.render_state.destroy();
@@ -71,8 +83,9 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
 pub fn destroy(self: *Self) void {
     cf.CFRelease(@ptrCast(self.texture_cache));
     cf.CFRelease(@ptrCast(self.pixel_pool));
-    deinitPipelines(self);
     self.render_state.destroy();
+    self.shader_draw.destroy();
+    self.pipeline_pool.destroy();
     self.command_queue.release();
     self.device.release();
     self.allocator.destroy(self);

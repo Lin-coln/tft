@@ -5,7 +5,6 @@ const mtl = macos.Metal;
 const Self = @import("Self.zig");
 const Quad = @import("Quad.zig");
 const getCommandBuffer = @import("getCommandBuffer.zig").getCommandBuffer;
-const getPipelineByDesc = @import("getPipelineByDesc.zig").getPipelineByDesc;
 
 pub fn drawBackground(self: *Self, color: @Vector(4, f32)) !void {
     const state = self.render_state;
@@ -15,7 +14,11 @@ pub fn drawBackground(self: *Self, color: @Vector(4, f32)) !void {
     defer pool.deinit();
     const command_buffer = try getCommandBuffer(self);
     errdefer state.resetCommands();
-    const pipeline = try getPipelineByDesc(self, state.desc_ppl_background);
+    const pipeline = try self.pipeline_pool.getByOptions(.{
+        .vertexFunction = self.shader_draw.function(.vertex_quad),
+        .fragmentFunction = self.shader_draw.function(.draw_background),
+        .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },
+    });
 
     const attachments = state.desc_render_pass.getProperty(objc.Object, "colorAttachments");
     const attachment = attachments.msgSend(objc.Object, "objectAtIndexedSubscript:", .{@as(usize, 0)});
