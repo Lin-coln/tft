@@ -9,5 +9,5 @@ test {
     _ = Renderer;
     _ = CaptureSource;
 
-    _ = @import("Renderer/Device/render.zig");
+    _ = @import("Renderer/Device/getOutput.zig");
 }

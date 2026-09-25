@@ -31,8 +31,6 @@ width: usize,
 height: usize,
 
 pub const RenderContext = @import("RenderContext.zig");
-pub const drawBackground = @import("drawBackground.zig").drawBackground;
-pub const drawSource = @import("drawSource.zig").drawSource;
 
 pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     if (width == 0 or height == 0) return error.InvalidDimensions;
@@ -88,6 +86,10 @@ pub fn destroy(self: *Self) void {
     self.command_queue.release();
     self.device.release();
     self.allocator.destroy(self);
+}
+
+pub fn createContext(self: *Self) !*RenderContext {
+    return RenderContext.create(self);
 }
 
 fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {

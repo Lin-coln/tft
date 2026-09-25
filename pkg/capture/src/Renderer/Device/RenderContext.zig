@@ -101,4 +101,6 @@ pub fn destroy(self: *Self) void {
     self.device.allocator.destroy(self);
 }
 
-pub const finish = @import("render.zig").finish;
+pub const drawBackground = @import("drawBackground.zig").drawBackground;
+pub const drawSource = @import("drawSource.zig").drawSource;
+pub const getOutput = @import("getOutput.zig").getOutput;

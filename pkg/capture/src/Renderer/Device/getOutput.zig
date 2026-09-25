@@ -7,8 +7,8 @@ const mtl = macos.Metal;
 
 const RenderContext = @import("RenderContext.zig");
 
-/// Finishes this render call and returns an owned reference to the output pixel buffer.
-pub fn finish(self: *RenderContext) !cv.CVImageBufferRef {
+/// Submits this render and returns an owned reference to the output pixel buffer.
+pub fn getOutput(self: *RenderContext) !cv.CVImageBufferRef {
     if (self.encoder_ended) return error.NoDrawPending;
     self.render_encoder.msgSend(void, "endEncoding", .{});
     self.encoder_ended = true;
@@ -35,14 +35,14 @@ test "one render context owns one frame and shares its encoder across draws" {
     });
     defer source.release();
 
-    const ctx = try RenderContext.create(device);
+    const ctx = try device.createContext();
     defer ctx.destroy();
     const encoder = ctx.render_encoder;
-    try device.drawBackground(ctx, .{ 0.5, 0.5, 0.5, 1.0 });
-    try device.drawSource(ctx, source, .{ 32, 32 });
+    try ctx.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 });
+    try ctx.drawSource(source, .{ 32, 32 });
     try std.testing.expectEqual(encoder.value, ctx.render_encoder.value);
 
-    const frame = try ctx.finish();
+    const frame = try ctx.getOutput();
     defer cv.CVBufferRelease(frame);
     try std.testing.expect(ctx.encoder_ended);
     try std.testing.expectEqual(ctx.output_buffer, frame);
