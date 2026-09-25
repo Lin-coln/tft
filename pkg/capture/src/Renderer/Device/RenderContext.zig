@@ -8,13 +8,12 @@ const Device = @import("Self.zig");
 const Self = @This();
 
 device: *Device,
-output_buffer: ?cv.CVPixelBufferRef,
-output_texture: cv.CVMetalTextureRef = undefined,
-desc_render_pass: objc.Object = undefined,
-command_buffer: objc.Object = undefined,
-render_encoder: ?objc.Object,
-
-pub const finish = @import("render.zig").finish;
+output_buffer: cv.CVPixelBufferRef,
+output_texture: cv.CVMetalTextureRef,
+desc_render_pass: objc.Object,
+command_buffer: objc.Object,
+render_encoder: objc.Object,
+encoder_ended: bool,
 
 pub fn create(device: *Device) !*Self {
     const pool = objc.AutoreleasePool.init();
@@ -24,8 +23,12 @@ pub fn create(device: *Device) !*Self {
     errdefer device.allocator.destroy(self);
     self.* = .{
         .device = device,
-        .output_buffer = null,
-        .render_encoder = null,
+        .output_buffer = undefined,
+        .output_texture = undefined,
+        .desc_render_pass = undefined,
+        .command_buffer = undefined,
+        .render_encoder = undefined,
+        .encoder_ended = false,
     };
 
     self.output_buffer = blk: {
@@ -34,14 +37,14 @@ pub fn create(device: *Device) !*Self {
             return error.PixelBufferCreationFailed;
         break :blk buffer_ref orelse return error.PixelBufferCreationFailed;
     };
-    errdefer cf.CFRelease(@ptrCast(self.output_buffer.?));
+    errdefer cf.CFRelease(@ptrCast(self.output_buffer));
 
     self.output_texture = blk: {
         var texture_ref: ?cv.CVMetalTextureRef = null;
         if (cv.CVMetalTextureCacheCreateTextureFromImage(
             null,
             device.texture_cache,
-            self.output_buffer.?,
+            self.output_buffer,
             null,
             mtl.MTLPixelFormatBGRA8Unorm,
             device.width,
@@ -79,8 +82,8 @@ pub fn create(device: *Device) !*Self {
         break :blk value.retain();
     };
     errdefer {
-        self.render_encoder.?.msgSend(void, "endEncoding", .{});
-        self.render_encoder.?.release();
+        self.render_encoder.msgSend(void, "endEncoding", .{});
+        self.render_encoder.release();
     }
     return self;
 }
@@ -89,17 +92,13 @@ pub fn destroy(self: *Self) void {
     const pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
-    if (self.render_encoder) |encoder| {
-        encoder.msgSend(void, "endEncoding", .{});
-        encoder.release();
-        self.render_encoder = null;
-    }
+    if (!self.encoder_ended) self.render_encoder.msgSend(void, "endEncoding", .{});
+    self.render_encoder.release();
     self.command_buffer.release();
     self.desc_render_pass.release();
     cf.CFRelease(@ptrCast(self.output_texture));
-    if (self.output_buffer) |output_buffer| {
-        cf.CFRelease(@ptrCast(output_buffer));
-        self.output_buffer = null;
-    }
+    cf.CFRelease(@ptrCast(self.output_buffer));
     self.device.allocator.destroy(self);
 }
+
+pub const finish = @import("render.zig").finish;

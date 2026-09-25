@@ -9,7 +9,8 @@ const Quad = @import("Quad.zig");
 pub fn drawBackground(self: *Self, ctx: *RenderContext, color: @Vector(4, f32)) !void {
     const pool = objc.AutoreleasePool.init();
     defer pool.deinit();
-    const encoder = ctx.render_encoder orelse return error.RenderEncoderUnavailable;
+    if (ctx.encoder_ended) return error.RenderEncoderUnavailable;
+    const encoder = ctx.render_encoder;
     const pipeline = try self.pipeline_pool.getByOptions(.{
         .vertexFunction = self.shader_draw.function(.vertex_quad),
         .fragmentFunction = self.shader_draw.function(.draw_background),
