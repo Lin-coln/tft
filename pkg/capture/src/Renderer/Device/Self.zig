@@ -8,7 +8,6 @@ const cv = macos.CoreVideo;
 
 extern fn MTLCreateSystemDefaultDevice() callconv(.c) objc.c.id;
 
-const RenderState = @import("RenderState.zig");
 const PipelinePool = @import("tft/stream").Device.PipelinePool;
 
 const Self = @This();
@@ -28,13 +27,15 @@ pipeline_pool: *PipelinePool,
 shader_draw: *Shader,
 pixel_pool: cv.CVPixelBufferPoolRef,
 texture_cache: cv.CVMetalTextureCacheRef,
-render_state: *RenderState,
+width: usize,
+height: usize,
 
+pub const RenderContext = @import("RenderContext.zig");
 pub const drawBackground = @import("drawBackground.zig").drawBackground;
 pub const drawSource = @import("drawSource.zig").drawSource;
-pub const render = @import("render.zig").render;
 
 pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
+    if (width == 0 or height == 0) return error.InvalidDimensions;
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
     self.* = .{
@@ -45,7 +46,8 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
         .shader_draw = undefined,
         .pixel_pool = undefined,
         .texture_cache = undefined,
-        .render_state = undefined,
+        .width = width,
+        .height = height,
     };
 
     self.device = objc.Object.fromId(MTLCreateSystemDefaultDevice() orelse return error.MetalUnavailable).retain();
@@ -64,9 +66,6 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
     self.shader_draw = try Shader.create(allocator, self.device, @embedFile("draw.metal"));
     errdefer self.shader_draw.destroy();
 
-    self.render_state = try RenderState.create(allocator, self.device, width, height);
-    errdefer self.render_state.destroy();
-
     self.pixel_pool = try createPixelPool(width, height);
     errdefer cf.CFRelease(@ptrCast(self.pixel_pool));
 
@@ -77,13 +76,13 @@ pub fn create(allocator: Allocator, width: usize, height: usize) !*Self {
         break :blk cache_ref orelse return error.TextureCacheCreationFailed;
     };
     errdefer cf.CFRelease(@ptrCast(self.texture_cache));
+
     return self;
 }
 
 pub fn destroy(self: *Self) void {
     cf.CFRelease(@ptrCast(self.texture_cache));
     cf.CFRelease(@ptrCast(self.pixel_pool));
-    self.render_state.destroy();
     self.shader_draw.destroy();
     self.pipeline_pool.destroy();
     self.command_queue.release();

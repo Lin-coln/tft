@@ -10,5 +10,4 @@ test {
     _ = CaptureSource;
 
     _ = @import("Renderer/Device/render.zig");
-    _ = @import("Renderer/Device/RenderState.zig");
 }

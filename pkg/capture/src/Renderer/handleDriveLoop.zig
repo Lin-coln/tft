@@ -2,6 +2,7 @@ const std = @import("std");
 const macos = @import("macos");
 const cv = macos.CoreVideo;
 const Frame = @import("tft/stream").Frame;
+const RenderContext = @import("Device/RenderContext.zig");
 
 const Self = @import("Self.zig");
 
@@ -55,15 +56,13 @@ fn render(self: *Self) !cv.CVImageBufferRef {
     defer texture.release();
 
     const device = self.device;
-    const state = device.render_state;
+    const ctx = try RenderContext.create(device);
+    defer ctx.destroy();
 
-    try device.drawBackground(.{ 0.5, 0.5, 0.5, 1.0 });
-    const canvas: @Vector(2, f32) = .{ @floatFromInt(state.width), @floatFromInt(state.height) };
+    try device.drawBackground(ctx, .{ 0.5, 0.5, 0.5, 1.0 });
+    const canvas: @Vector(2, f32) = .{ @floatFromInt(device.width), @floatFromInt(device.height) };
     const center = self.source.calcRect(canvas);
-    device.drawSource(texture, center) catch |err| {
-        state.resetCommands();
-        return err;
-    };
+    try device.drawSource(ctx, texture, center);
 
-    return device.render();
+    return ctx.finish();
 }
