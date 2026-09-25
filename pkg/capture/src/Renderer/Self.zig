@@ -21,8 +21,8 @@ const Shader = stream.Device.Shader.Of(
     },
 );
 const Renderer = stream.Renderer.Of(Self, handleRender, handleFrame);
-const Context = Renderer.Context;
-const Frame = Renderer.Frame;
+const Context = stream.Renderer.Context;
+const Frame = stream.Renderer.Frame;
 const Packet = Encoder.Packet;
 
 allocator: Allocator,
@@ -78,6 +78,7 @@ pub fn init(
     self.shader_draw = try Shader.create(allocator, self.renderer.device.device, @embedFile("Device/draw.metal"));
     errdefer self.shader_draw.destroy();
 
+    try self.renderer.driver.start();
     return self;
 }
 

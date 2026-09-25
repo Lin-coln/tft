@@ -8,6 +8,4 @@ pub const CaptureSource = @import("CaptureSource.zig");
 test {
     _ = Renderer;
     _ = CaptureSource;
-
-    _ = @import("Renderer/Device/getBorrowedOuputTexture.zig");
 }
