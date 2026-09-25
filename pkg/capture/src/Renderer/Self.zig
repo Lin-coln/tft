@@ -1,35 +1,37 @@
 const std = @import("std");
 const macos = @import("macos");
-const cf = macos.CoreFoundation;
+const objc = @import("objc");
+const stream = @import("tft/stream");
 const CaptureSource = @import("../CaptureSource.zig");
+const Quad = @import("Device/Quad.zig");
 
 const Allocator = std.mem.Allocator;
 
-const cv = macos.CoreVideo;
-
-const Device = @import("Device/Self.zig");
-const Driver = @import("handleDriveLoop.zig").Driver;
+const mtl = macos.Metal;
+const Texture = stream.Texture;
 
 const Self = @This();
-const Encoder = @import("tft/stream").Encoder.Of(*Self);
+const Encoder = stream.Encoder.Of(*Self);
+const Shader = stream.Device.Shader.Of(
+    enum { vertex_quad, draw_background, draw_source },
+    .{
+        .vertex_quad = .vertex,
+        .draw_background = .fragment,
+        .draw_source = .fragment,
+    },
+);
+const Renderer = stream.Renderer.Of(Self, handleRender, handleFrame);
+const Context = Renderer.Context;
+const Frame = Renderer.Frame;
 const Packet = Encoder.Packet;
 
 allocator: Allocator,
-driver: *Driver,
-
 source: *CaptureSource,
-
-img_last: ?cv.CVImageBufferRef,
-img_last_mutext: std.Io.Mutex,
-
-device: *Device,
-pixel_pool: cv.CVPixelBufferPoolRef,
-texture_cache: cv.CVMetalTextureCacheRef,
-
-encoder: *Encoder,
-
 ctx: *anyopaque,
 handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
+encoder: *Encoder = undefined,
+renderer: *Renderer = undefined,
+shader_draw: *Shader = undefined,
 
 pub fn init(
     allocator: Allocator,
@@ -40,62 +42,22 @@ pub fn init(
         handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
     },
 ) !*Self {
-    if (opts.framerate == 0 or opts.framerate > std.time.ns_per_s)
-        return error.InvalidFramerate;
-
     const self = try allocator.create(Self);
     errdefer allocator.destroy(self);
 
     self.* = .{
         .allocator = allocator,
-        .device = undefined,
-        .pixel_pool = undefined,
-        .texture_cache = undefined,
-        .driver = undefined,
-        .img_last = null,
-        .img_last_mutext = .init,
-        .encoder = undefined,
         .source = opts.source,
         .ctx = opts.ctx,
         .handle_output = opts.handle_output,
     };
 
-    self.device = try Device.create(allocator, 1920, 1080);
-    errdefer self.device.destroy();
-
-    self.pixel_pool = try createPixelPool(self.device.width, self.device.height);
-    errdefer cf.CFRelease(@ptrCast(self.pixel_pool));
-
-    self.texture_cache = blk: {
-        var cache_ref: ?cv.CVMetalTextureCacheRef = null;
-        if (cv.CVMetalTextureCacheCreate(null, null, self.device.device.value.?, null, &cache_ref) != 0)
-            return error.TextureCacheCreationFailed;
-        break :blk cache_ref orelse return error.TextureCacheCreationFailed;
-    };
-    errdefer cf.CFRelease(@ptrCast(self.texture_cache));
-
-    self.driver = try Driver.create(allocator, .{
+    self.encoder = try Encoder.create(allocator, .{
         .ctx = self,
-        .interval = .fromNanoseconds(std.time.ns_per_s / opts.framerate),
+        .capacity = 6,
+        .handle_error = handleEncodeError,
+        .handle_output = handleEncodedPacket,
     });
-    errdefer self.driver.destroy();
-
-    self.encoder = block: {
-        const Handler = struct {
-            fn handleOutput(renderer: *Self, borrowed: *Packet) !void {
-                renderer.handle_output(renderer.ctx, borrowed);
-            }
-            fn handleError(_: *Self, err: anyerror) void {
-                @panic(@errorName(err));
-            }
-        };
-        break :block try Encoder.create(allocator, .{
-            .ctx = self,
-            .capacity = 6,
-            .handle_error = Handler.handleError,
-            .handle_output = Handler.handleOutput,
-        });
-    };
     errdefer self.encoder.destroy();
 
     try self.encoder.configure(.{
@@ -104,61 +66,72 @@ pub fn init(
         .framerate = @intCast(opts.framerate),
     });
     try self.encoder.start();
-    try self.driver.start();
+
+    self.renderer = try Renderer.create(allocator, .{
+        .ctx = self,
+        .width = 1920,
+        .height = 1080,
+        .framerate = opts.framerate,
+    });
+    errdefer self.renderer.destroy();
+
+    self.shader_draw = try Shader.create(allocator, self.renderer.device.device, @embedFile("Device/draw.metal"));
+    errdefer self.shader_draw.destroy();
 
     return self;
 }
 
 pub fn deinit(self: *Self) void {
-    self.driver.destroy();
+    self.renderer.destroy();
     self.encoder.destroy();
-    cv.CVBufferRelease(self.img_last);
-    cf.CFRelease(@ptrCast(self.texture_cache));
-    cf.CFRelease(@ptrCast(self.pixel_pool));
-    self.device.destroy();
+    self.shader_draw.destroy();
     self.allocator.destroy(self);
 }
 
-fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
-    const props = cf.CFDictionaryCreateMutable(
-        null,
-        0,
-        &cf.kCFTypeDictionaryKeyCallBacks,
-        &cf.kCFTypeDictionaryValueCallBacks,
-    ) orelse return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(props);
+fn handleRender(self: *Self, ctx: *Context) void {
+    self.draw(ctx) catch |err| std.log.err("render failed: {s}", .{@errorName(err)});
+}
 
-    const attrs = cf.CFDictionaryCreateMutable(
-        null,
-        0,
-        &cf.kCFTypeDictionaryKeyCallBacks,
-        &cf.kCFTypeDictionaryValueCallBacks,
-    ) orelse return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(attrs);
+fn draw(self: *Self, ctx: *Context) !void {
+    const pool = objc.AutoreleasePool.init();
+    defer pool.deinit();
 
-    const width_value: i64 = @intCast(width);
-    const width_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &width_value) orelse
-        return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(@ptrCast(width_number));
-    const height_value: i64 = @intCast(height);
-    const height_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &height_value) orelse
-        return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(@ptrCast(height_number));
-    const format_value: i64 = cv.kCVPixelFormatType_32BGRA;
-    const format_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &format_value) orelse
-        return error.PixelBufferAttributesCreationFailed;
-    defer cf.CFRelease(@ptrCast(format_number));
+    const texture = (try self.source.getTexture(self.renderer.device.device)) orelse return;
+    defer texture.release();
 
-    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferWidthKey, width_number);
-    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferHeightKey, height_number);
-    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferPixelFormatTypeKey, format_number);
-    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferMetalCompatibilityKey, cf.kCFBooleanTrue);
-    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferIOSurfacePropertiesKey, props);
+    try self.drawSource(ctx, texture);
+}
 
-    var pool_ref: ?cv.CVPixelBufferPoolRef = null;
-    if (cv.CVPixelBufferPoolCreate(null, null, attrs, &pool_ref) != 0)
-        return error.PixelBufferPoolCreationFailed;
-    const pixel_pool = pool_ref orelse return error.PixelBufferPoolCreationFailed;
-    errdefer cf.CFRelease(@ptrCast(pixel_pool));
-    return pixel_pool;
+fn drawSource(self: *Self, ctx: *Context, source: *Texture) !void {
+    const canvas: @Vector(2, f32) = .{ @floatFromInt(self.renderer.width), @floatFromInt(self.renderer.height) };
+    const source_size: @Vector(2, f32) = .{ @floatFromInt(source.width()), @floatFromInt(source.height()) };
+    const scale = @min(canvas[0] / source_size[0], canvas[1] / source_size[1]);
+    const size = source_size * @as(@Vector(2, f32), @splat(scale));
+    const center = self.source.calcRect(canvas);
+    const quad: Quad = .{ .origin = center - size / @as(@Vector(2, f32), @splat(2)), .size = size, .canvas = canvas };
+    const pipeline = try self.renderer.device.piplines.getByOptions(.{
+        .vertexFunction = self.shader_draw.function(.vertex_quad),
+        .fragmentFunction = self.shader_draw.function(.draw_source),
+        .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },
+    });
+
+    ctx.encoder.msgSend(void, "setRenderPipelineState:", .{pipeline});
+    ctx.encoder.msgSend(void, "setVertexBytes:length:atIndex:", .{ &quad, @as(usize, @sizeOf(Quad)), @as(usize, 0) });
+    ctx.encoder.msgSend(void, "setFragmentTexture:atIndex:", .{ source.obj, @as(usize, 0) });
+    ctx.encoder.msgSend(void, "drawPrimitives:vertexStart:vertexCount:", .{ mtl.MTLPrimitiveTypeTriangleStrip, @as(usize, 0), @as(usize, 4) });
+}
+
+fn handleFrame(self: *Self, frame: *Frame) void {
+    self.encoder.post(frame) catch |err| {
+        std.log.err("frame post failed: {s}", .{@errorName(err)});
+        frame.destroy();
+    };
+}
+
+fn handleEncodedPacket(self: *Self, borrowed: *Packet) !void {
+    self.handle_output(self.ctx, borrowed);
+}
+
+fn handleEncodeError(_: *Self, err: anyerror) void {
+    @panic(@errorName(err));
 }
