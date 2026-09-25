@@ -1,6 +1,9 @@
 const std = @import("std");
 const macos = @import("macos");
+const objc = @import("objc");
+const cf = macos.CoreFoundation;
 const cv = macos.CoreVideo;
+const mtl = macos.Metal;
 const Frame = @import("tft/stream").Frame;
 
 const Self = @import("Self.zig");
@@ -51,6 +54,9 @@ fn handleDriveLoop(
 }
 
 fn render(self: *Self) !cv.CVImageBufferRef {
+    const pool = objc.AutoreleasePool.init();
+    defer pool.deinit();
+
     const texture = (try self.source.getTexture(self.device.device)) orelse return error.NoSourceTexture;
     defer texture.release();
 
@@ -63,5 +69,53 @@ fn render(self: *Self) !cv.CVImageBufferRef {
     const center = self.source.calcRect(canvas);
     try ctx.drawSource(texture, center);
 
-    return ctx.getOutput();
+    const output = try ctx.getBorrowedOuputTexture();
+
+    const output_buffer = blk: {
+        var buffer_ref: ?cv.CVPixelBufferRef = null;
+        if (cv.CVPixelBufferPoolCreatePixelBuffer(null, self.pixel_pool, &buffer_ref) != 0)
+            return error.PixelBufferCreationFailed;
+        break :blk buffer_ref orelse return error.PixelBufferCreationFailed;
+    };
+    errdefer cf.CFRelease(@ptrCast(output_buffer));
+
+    const output_texture = blk: {
+        var texture_ref: ?cv.CVMetalTextureRef = null;
+        if (cv.CVMetalTextureCacheCreateTextureFromImage(
+            null,
+            self.texture_cache,
+            output_buffer,
+            null,
+            mtl.MTLPixelFormatBGRA8Unorm,
+            device.width,
+            device.height,
+            0,
+            &texture_ref,
+        ) != 0) return error.TextureCreationFailed;
+        break :blk texture_ref orelse return error.TextureCreationFailed;
+    };
+    defer cf.CFRelease(@ptrCast(output_texture));
+
+    const target = cv.CVMetalTextureGetTexture(output_texture) orelse return error.TextureCreationFailed;
+    const command_buffer = blk: {
+        const value = device.command_queue.getProperty(objc.Object, "commandBuffer");
+        if (value.value == null) return error.CommandBufferCreationFailed;
+        break :blk value.retain();
+    };
+    defer command_buffer.release();
+
+    const blit_encoder = blk: {
+        const value = command_buffer.getProperty(objc.Object, "blitCommandEncoder");
+        if (value.value == null) return error.BlitCommandEncoderCreationFailed;
+        break :blk value.retain();
+    };
+    defer blit_encoder.release();
+
+    blit_encoder.msgSend(void, "copyFromTexture:toTexture:", .{ output.obj, objc.Object.fromId(target) });
+    blit_encoder.msgSend(void, "endEncoding", .{});
+    command_buffer.msgSend(void, "commit", .{});
+    command_buffer.msgSend(void, "waitUntilCompleted", .{});
+    if (command_buffer.getProperty(usize, "status") != 4) return error.RenderFailed;
+
+    return output_buffer;
 }

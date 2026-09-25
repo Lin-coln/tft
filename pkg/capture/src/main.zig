@@ -9,5 +9,5 @@ test {
     _ = Renderer;
     _ = CaptureSource;
 
-    _ = @import("Renderer/Device/getOutput.zig");
+    _ = @import("Renderer/Device/getBorrowedOuputTexture.zig");
 }

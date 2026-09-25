@@ -1,15 +1,13 @@
 const macos = @import("macos");
 const objc = @import("objc");
 
-const cf = macos.CoreFoundation;
-const cv = macos.CoreVideo;
 const mtl = macos.Metal;
+const Texture = @import("tft/stream").Texture;
 const Device = @import("Self.zig");
 const Self = @This();
 
 device: *Device,
-output_buffer: cv.CVPixelBufferRef,
-output_texture: cv.CVMetalTextureRef,
+output_texture: *Texture,
 desc_render_pass: objc.Object,
 command_buffer: objc.Object,
 render_encoder: objc.Object,
@@ -23,7 +21,6 @@ pub fn create(device: *Device) !*Self {
     errdefer device.allocator.destroy(self);
     self.* = .{
         .device = device,
-        .output_buffer = undefined,
         .output_texture = undefined,
         .desc_render_pass = undefined,
         .command_buffer = undefined,
@@ -31,31 +28,15 @@ pub fn create(device: *Device) !*Self {
         .encoder_ended = false,
     };
 
-    self.output_buffer = blk: {
-        var buffer_ref: ?cv.CVPixelBufferRef = null;
-        if (cv.CVPixelBufferPoolCreatePixelBuffer(null, device.pixel_pool, &buffer_ref) != 0)
-            return error.PixelBufferCreationFailed;
-        break :blk buffer_ref orelse return error.PixelBufferCreationFailed;
-    };
-    errdefer cf.CFRelease(@ptrCast(self.output_buffer));
-
-    self.output_texture = blk: {
-        var texture_ref: ?cv.CVMetalTextureRef = null;
-        if (cv.CVMetalTextureCacheCreateTextureFromImage(
-            null,
-            device.texture_cache,
-            self.output_buffer,
-            null,
-            mtl.MTLPixelFormatBGRA8Unorm,
-            device.width,
-            device.height,
-            0,
-            &texture_ref,
-        ) != 0) return error.TextureCreationFailed;
-        break :blk texture_ref orelse return error.TextureCreationFailed;
-    };
-    errdefer cf.CFRelease(@ptrCast(self.output_texture));
-    const target = cv.CVMetalTextureGetTexture(self.output_texture) orelse return error.TextureCreationFailed;
+    self.output_texture = try Texture.create(device.allocator, .{
+        .device = device.device,
+        .width = device.width,
+        .height = device.height,
+        .pixel_format = mtl.MTLPixelFormatBGRA8Unorm,
+        .usage = mtl.MTLTextureUsageRenderTarget,
+        .storage_mode = mtl.MTLStorageModePrivate,
+    });
+    errdefer self.output_texture.release();
 
     self.desc_render_pass = blk: {
         const value = objc.getClass("MTLRenderPassDescriptor").?.msgSend(objc.Object, "new", .{});
@@ -65,7 +46,7 @@ pub fn create(device: *Device) !*Self {
     errdefer self.desc_render_pass.release();
     const attachments = self.desc_render_pass.getProperty(objc.Object, "colorAttachments");
     const attachment = attachments.msgSend(objc.Object, "objectAtIndexedSubscript:", .{@as(usize, 0)});
-    attachment.setProperty("texture", objc.Object.fromId(target));
+    attachment.setProperty("texture", self.output_texture.obj);
     attachment.setProperty("loadAction", mtl.MTLLoadActionDontCare);
     attachment.setProperty("storeAction", mtl.MTLStoreActionStore);
 
@@ -96,11 +77,10 @@ pub fn destroy(self: *Self) void {
     self.render_encoder.release();
     self.command_buffer.release();
     self.desc_render_pass.release();
-    cf.CFRelease(@ptrCast(self.output_texture));
-    cf.CFRelease(@ptrCast(self.output_buffer));
+    self.output_texture.release();
     self.device.allocator.destroy(self);
 }
 
 pub const drawBackground = @import("drawBackground.zig").drawBackground;
 pub const drawSource = @import("drawSource.zig").drawSource;
-pub const getOutput = @import("getOutput.zig").getOutput;
+pub const getBorrowedOuputTexture = @import("getBorrowedOuputTexture.zig").getBorrowedOuputTexture;

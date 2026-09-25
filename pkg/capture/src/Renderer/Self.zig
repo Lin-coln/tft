@@ -1,5 +1,6 @@
 const std = @import("std");
 const macos = @import("macos");
+const cf = macos.CoreFoundation;
 const CaptureSource = @import("../CaptureSource.zig");
 
 const Allocator = std.mem.Allocator;
@@ -22,6 +23,8 @@ img_last: ?cv.CVImageBufferRef,
 img_last_mutext: std.Io.Mutex,
 
 device: *Device,
+pixel_pool: cv.CVPixelBufferPoolRef,
+texture_cache: cv.CVMetalTextureCacheRef,
 
 encoder: *Encoder,
 
@@ -46,6 +49,8 @@ pub fn init(
     self.* = .{
         .allocator = allocator,
         .device = undefined,
+        .pixel_pool = undefined,
+        .texture_cache = undefined,
         .driver = undefined,
         .img_last = null,
         .img_last_mutext = .init,
@@ -57,6 +62,17 @@ pub fn init(
 
     self.device = try Device.create(allocator, 1920, 1080);
     errdefer self.device.destroy();
+
+    self.pixel_pool = try createPixelPool(self.device.width, self.device.height);
+    errdefer cf.CFRelease(@ptrCast(self.pixel_pool));
+
+    self.texture_cache = blk: {
+        var cache_ref: ?cv.CVMetalTextureCacheRef = null;
+        if (cv.CVMetalTextureCacheCreate(null, null, self.device.device.value.?, null, &cache_ref) != 0)
+            return error.TextureCacheCreationFailed;
+        break :blk cache_ref orelse return error.TextureCacheCreationFailed;
+    };
+    errdefer cf.CFRelease(@ptrCast(self.texture_cache));
 
     self.driver = try Driver.create(allocator, .{
         .ctx = self,
@@ -97,6 +113,52 @@ pub fn deinit(self: *Self) void {
     self.driver.destroy();
     self.encoder.destroy();
     cv.CVBufferRelease(self.img_last);
+    cf.CFRelease(@ptrCast(self.texture_cache));
+    cf.CFRelease(@ptrCast(self.pixel_pool));
     self.device.destroy();
     self.allocator.destroy(self);
+}
+
+fn createPixelPool(width: usize, height: usize) !cv.CVPixelBufferPoolRef {
+    const props = cf.CFDictionaryCreateMutable(
+        null,
+        0,
+        &cf.kCFTypeDictionaryKeyCallBacks,
+        &cf.kCFTypeDictionaryValueCallBacks,
+    ) orelse return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(props);
+
+    const attrs = cf.CFDictionaryCreateMutable(
+        null,
+        0,
+        &cf.kCFTypeDictionaryKeyCallBacks,
+        &cf.kCFTypeDictionaryValueCallBacks,
+    ) orelse return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(attrs);
+
+    const width_value: i64 = @intCast(width);
+    const width_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &width_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(width_number));
+    const height_value: i64 = @intCast(height);
+    const height_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &height_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(height_number));
+    const format_value: i64 = cv.kCVPixelFormatType_32BGRA;
+    const format_number = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &format_value) orelse
+        return error.PixelBufferAttributesCreationFailed;
+    defer cf.CFRelease(@ptrCast(format_number));
+
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferWidthKey, width_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferHeightKey, height_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferPixelFormatTypeKey, format_number);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferMetalCompatibilityKey, cf.kCFBooleanTrue);
+    cf.CFDictionarySetValue(attrs, cv.kCVPixelBufferIOSurfacePropertiesKey, props);
+
+    var pool_ref: ?cv.CVPixelBufferPoolRef = null;
+    if (cv.CVPixelBufferPoolCreate(null, null, attrs, &pool_ref) != 0)
+        return error.PixelBufferPoolCreationFailed;
+    const pixel_pool = pool_ref orelse return error.PixelBufferPoolCreationFailed;
+    errdefer cf.CFRelease(@ptrCast(pixel_pool));
+    return pixel_pool;
 }

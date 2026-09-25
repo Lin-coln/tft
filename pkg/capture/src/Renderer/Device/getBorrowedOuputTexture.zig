@@ -1,14 +1,12 @@
 const std = @import("std");
 const macos = @import("macos");
 const Texture = @import("tft/stream").Texture;
-
-const cv = macos.CoreVideo;
 const mtl = macos.Metal;
 
 const RenderContext = @import("RenderContext.zig");
 
-/// Submits this render and returns an owned reference to the output pixel buffer.
-pub fn getOutput(self: *RenderContext) !cv.CVImageBufferRef {
+/// Submits this render and returns a texture borrowed from this context.
+pub fn getBorrowedOuputTexture(self: *RenderContext) !*Texture {
     if (self.encoder_ended) return error.NoDrawPending;
     self.render_encoder.msgSend(void, "endEncoding", .{});
     self.encoder_ended = true;
@@ -17,7 +15,7 @@ pub fn getOutput(self: *RenderContext) !cv.CVImageBufferRef {
     self.command_buffer.msgSend(void, "waitUntilCompleted", .{});
     if (self.command_buffer.getProperty(usize, "status") != 4) return error.RenderFailed;
 
-    return cv.CVBufferRetain(self.output_buffer).?;
+    return self.output_texture;
 }
 
 test "one render context owns one frame and shares its encoder across draws" {
@@ -42,10 +40,9 @@ test "one render context owns one frame and shares its encoder across draws" {
     try ctx.drawSource(source, .{ 32, 32 });
     try std.testing.expectEqual(encoder.value, ctx.render_encoder.value);
 
-    const frame = try ctx.getOutput();
-    defer cv.CVBufferRelease(frame);
+    const output = try ctx.getBorrowedOuputTexture();
     try std.testing.expect(ctx.encoder_ended);
-    try std.testing.expectEqual(ctx.output_buffer, frame);
-    try std.testing.expectEqual(@as(usize, 64), cv.CVPixelBufferGetWidth(frame));
-    try std.testing.expectEqual(@as(usize, 64), cv.CVPixelBufferGetHeight(frame));
+    try std.testing.expectEqual(ctx.output_texture, output);
+    try std.testing.expectEqual(@as(usize, 64), output.width());
+    try std.testing.expectEqual(@as(usize, 64), output.height());
 }
