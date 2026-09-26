@@ -18,11 +18,6 @@ vertex VertexOut vertex_quad(uint id [[vertex_id]], constant Quad &quad [[buffer
     return out;
 }
 
-fragment float4 draw_background(VertexOut in [[stage_in]], constant float4 &color [[buffer(0)]]) {
-    (void)in;
-    return color;
-}
-
 fragment float4 draw_source(VertexOut in [[stage_in]], texture2d<float, access::sample> source [[texture(0)]]) {
     constexpr sampler linear_sampler(coord::normalized, address::clamp_to_edge, filter::linear);
     return source.sample(linear_sampler, in.uv);

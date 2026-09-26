@@ -3,7 +3,11 @@ const macos = @import("macos");
 const objc = @import("objc");
 const stream = @import("tft/stream");
 const CaptureSource = @import("../CaptureSource.zig");
-const Quad = @import("Device/Quad.zig");
+const Quad = struct {
+    origin: @Vector(2, f32),
+    size: @Vector(2, f32),
+    canvas: @Vector(2, f32),
+};
 
 const Allocator = std.mem.Allocator;
 
@@ -13,10 +17,9 @@ const Texture = stream.Texture;
 const Self = @This();
 const Encoder = stream.Encoder.Of(*Self);
 const Shader = stream.Device.Shader.Of(
-    enum { vertex_quad, draw_background, draw_source },
+    enum { vertex_quad, draw_source },
     .{
         .vertex_quad = .vertex,
-        .draw_background = .fragment,
         .draw_source = .fragment,
     },
 );
@@ -75,7 +78,7 @@ pub fn init(
     });
     errdefer self.renderer.destroy();
 
-    self.shader_draw = try Shader.create(allocator, self.renderer.device.device, @embedFile("Device/draw.metal"));
+    self.shader_draw = try Shader.create(allocator, self.renderer.device.device, @embedFile("draw.metal"));
     errdefer self.shader_draw.destroy();
 
     try self.renderer.driver.start();
