@@ -3,7 +3,7 @@ const napi = @import("napi-zig");
 const Queue = @import("Queue.zig");
 
 const CaptureSource = @import("../CaptureSource/Self.zig");
-const Renderer = @import("../Renderer/Self.zig");
+const VideoCore = @import("../VideoCore/Self.zig");
 const Packet = @import("tft/stream").Encoder.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
 const PngEncoder = @import("../target/PngEncoder.zig");
@@ -46,7 +46,7 @@ stream_output: *StreamOutputContext,
 
 window_id: ?u32,
 source: ?*CaptureSource,
-renderer: ?*Renderer,
+video_core: ?*VideoCore,
 
 pub fn init(
     env: napi.Env,
@@ -89,7 +89,7 @@ pub fn init(
         .stream_output = stream_output,
         .window_id = null,
         .source = null,
-        .renderer = null,
+        .video_core = null,
     };
 }
 
@@ -115,9 +115,9 @@ pub fn screenshot(self: *Self, env: napi.Env) !napi.Val {
 }
 
 fn deinitTarget(self: *Self) void {
-    if (self.renderer) |renderer| renderer.deinit();
+    if (self.video_core) |video_core| video_core.deinit();
     if (self.source) |source| source.destroy();
-    self.renderer = null;
+    self.video_core = null;
     self.source = null;
     self.window_id = null;
 }

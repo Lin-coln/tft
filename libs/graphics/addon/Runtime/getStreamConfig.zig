@@ -4,8 +4,8 @@ const Self = @import("Self.zig");
 const ResolveConfig = @import("tft/stream").Encoder.ResolveConfig;
 
 pub fn getStreamConfig(self: *Self, env: napi.Env) !napi.Val {
-    const renderer = self.renderer orelse return env.createNull();
-    const cfg = renderer.encoder.getResolvedConfig() orelse return env.createNull();
+    const video_core = self.video_core orelse return env.createNull();
+    const cfg = video_core.encoder.getResolvedConfig() orelse return env.createNull();
     defer cfg.release();
 
     return streamConfigToJs(env, cfg);
