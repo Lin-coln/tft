@@ -1,7 +1,7 @@
 const std = @import("std");
 const Self = @import("Self.zig");
 
-const CaptureSource = @import("../CaptureSource/Self.zig");
+const CaptureNode = @import("../VideoCore/CaptureNode.zig");
 const VideoCore = @import("../VideoCore/Self.zig");
 const resolveTarget = @import("../target/resolveTarget.zig").resolveTarget;
 
@@ -11,7 +11,7 @@ pub fn updateTarget(self: *Self, window_id: u32) !void {
     const target = try resolveTarget(window_id);
     defer target.release();
 
-    const source = try CaptureSource.create(self.allocator, .{
+    const source = try CaptureNode.create(self.allocator, .{
         .target = target,
         .frame_interval_value = 1,
         .frame_interval_timescale = 60,

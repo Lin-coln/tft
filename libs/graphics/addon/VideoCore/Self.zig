@@ -2,7 +2,7 @@ const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
 const stream = @import("tft/stream");
-const CaptureSource = @import("../CaptureSource/Self.zig");
+const CaptureNode = @import("CaptureNode.zig");
 const Quad = struct {
     origin: @Vector(2, f32),
     size: @Vector(2, f32),
@@ -29,7 +29,7 @@ const Frame = stream.Renderer.Frame;
 const Packet = Encoder.Packet;
 
 allocator: Allocator,
-source: *CaptureSource,
+source: *CaptureNode,
 ctx: *anyopaque,
 handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
 encoder: *Encoder = undefined,
@@ -40,7 +40,7 @@ pub fn init(
     allocator: Allocator,
     opts: struct {
         ctx: *anyopaque,
-        source: *CaptureSource,
+        source: *CaptureNode,
         framerate: u32,
         handle_output: *const fn (ctx: *anyopaque, borrowed: *Packet) void,
     },
@@ -74,7 +74,7 @@ pub fn init(
         .ctx = self,
         .width = 1920,
         .height = 1080,
-        .framerate = opts.framerate,
+        .interval = .fromNanoseconds(std.time.ns_per_s / opts.framerate),
     });
     errdefer self.renderer.destroy();
 

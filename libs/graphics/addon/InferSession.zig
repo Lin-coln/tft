@@ -1,7 +1,7 @@
 const std = @import("std");
 const Infer = @import("vision").Infer;
 
-const CaptureSource = @import("CaptureSource/Self.zig");
+const CaptureNode = @import("VideoCore/CaptureNode.zig");
 const dispatch = std.c.dispatch;
 const log = std.log.scoped(.infer_session);
 const Self = @This();
@@ -12,8 +12,8 @@ worker: *Worker,
 pub const Options = struct {
     /// Must allow allocation/free from different threads.
     allocator: std.mem.Allocator,
-    /// Borrowed. Destroy the session before destroying CaptureSource.
-    source: *CaptureSource,
+    /// Borrowed. Destroy the session before destroying CaptureNode.
+    source: *CaptureNode,
 };
 
 pub fn init(options: Options) !Self {
@@ -52,7 +52,7 @@ pub fn deinit(self: Self) void {
 // Screenshot/InferSession values may move during construction and N-API wrapping.
 const Worker = struct {
     allocator: std.mem.Allocator,
-    source: *CaptureSource,
+    source: *CaptureNode,
     infer: *Infer,
     wake: dispatch.semaphore_t,
     stopping: std.atomic.Value(bool),
@@ -90,7 +90,7 @@ fn inferLatest(worker: *Worker) !void {
 }
 
 test "session value can move and stop without a surface" {
-    var source: CaptureSource = .{ .allocator = std.testing.allocator, .capture = null };
+    var source: CaptureNode = .{ .allocator = std.testing.allocator, .capture = null };
 
     const session = try Self.init(.{ .allocator = std.testing.allocator, .source = &source });
     // Put the returned value in another owner, as Screenshot.init does.
@@ -107,7 +107,7 @@ test "allocation failures clean up the session and infer instance" {
 }
 
 fn initAndDeinit(allocator: std.mem.Allocator) !void {
-    var source: CaptureSource = .{ .allocator = allocator, .capture = null };
+    var source: CaptureNode = .{ .allocator = allocator, .capture = null };
     const session = try Self.init(.{ .allocator = allocator, .source = &source });
     session.deinit();
 }

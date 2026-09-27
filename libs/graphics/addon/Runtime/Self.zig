@@ -2,7 +2,7 @@ const std = @import("std");
 const napi = @import("napi-zig");
 const Queue = @import("Queue.zig");
 
-const CaptureSource = @import("../CaptureSource/Self.zig");
+const CaptureNode = @import("../VideoCore/CaptureNode.zig");
 const VideoCore = @import("../VideoCore/Self.zig");
 const Packet = @import("tft/stream").Encoder.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
@@ -45,7 +45,7 @@ thread: *Thread,
 stream_output: *StreamOutputContext,
 
 window_id: ?u32,
-source: ?*CaptureSource,
+source: ?*CaptureNode,
 video_core: ?*VideoCore,
 
 pub fn init(
