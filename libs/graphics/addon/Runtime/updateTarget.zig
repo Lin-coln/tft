@@ -1,9 +1,8 @@
 const std = @import("std");
-const cap = @import("capture");
 const Self = @import("Self.zig");
 
-const CaptureSource = cap.CaptureSource;
-const Renderer = cap.Renderer;
+const CaptureSource = @import("../CaptureSource/Self.zig");
+const Renderer = @import("../Renderer/Self.zig");
 const resolveTarget = @import("../target/resolveTarget.zig").resolveTarget;
 
 pub fn updateTarget(self: *Self, window_id: u32) !void {

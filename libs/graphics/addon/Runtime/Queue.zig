@@ -1,7 +1,5 @@
 const std = @import("std");
-const cap = @import("capture");
-
-const Packet = cap.Packet;
+const Packet = @import("tft/stream").Encoder.Packet;
 
 const Self = @This();
 

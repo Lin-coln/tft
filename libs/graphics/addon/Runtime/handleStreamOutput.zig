@@ -1,7 +1,6 @@
-const cap = @import("capture");
 const Self = @import("Self.zig");
 
-const Packet = cap.Packet;
+const Packet = @import("tft/stream").Encoder.Packet;
 const StreamOutputContext = Self.StreamOutputContext;
 
 pub fn onReceivePacket(ctx: *anyopaque, borrowed: *Packet) void {

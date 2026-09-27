@@ -1,11 +1,10 @@
 const std = @import("std");
 const napi = @import("napi-zig");
-const cap = @import("capture");
 const Queue = @import("Queue.zig");
 
-const CaptureSource = cap.CaptureSource;
-const Renderer = cap.Renderer;
-const Packet = cap.Packet;
+const CaptureSource = @import("../CaptureSource/Self.zig");
+const Renderer = @import("../Renderer/Self.zig");
+const Packet = @import("tft/stream").Encoder.Packet;
 const ensureInitialized = @import("../target/ensureInitialized.zig").ensureInitialized;
 const PngEncoder = @import("../target/PngEncoder.zig");
 

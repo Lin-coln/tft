@@ -1,7 +1,7 @@
 const std = @import("std");
 const Infer = @import("vision").Infer;
 
-const CaptureSource = @import("capture").CaptureSource;
+const CaptureSource = @import("CaptureSource/Self.zig");
 const dispatch = std.c.dispatch;
 const log = std.log.scoped(.infer_session);
 const Self = @This();

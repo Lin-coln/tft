@@ -2,7 +2,7 @@ const std = @import("std");
 const macos = @import("macos");
 const objc = @import("objc");
 const stream = @import("tft/stream");
-const CaptureSource = @import("../CaptureSource.zig");
+const CaptureSource = @import("../CaptureSource/Self.zig");
 const Quad = struct {
     origin: @Vector(2, f32),
     size: @Vector(2, f32),
@@ -113,7 +113,7 @@ fn drawSource(self: *Self, ctx: *Context, source: *Texture) !void {
     const size = source_size * @as(@Vector(2, f32), @splat(scale));
     const center = self.source.calcRect(canvas);
     const quad: Quad = .{ .origin = center - size / @as(@Vector(2, f32), @splat(2)), .size = size, .canvas = canvas };
-    const pipeline = try self.renderer.device.piplines.getByOptions(.{
+    const pipeline = try self.renderer.device.pipelines.getByOptions(.{
         .vertexFunction = self.shader_draw.function(.vertex_quad),
         .fragmentFunction = self.shader_draw.function(.draw_source),
         .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },

@@ -11,11 +11,11 @@
             .url = "https://github.com/mitchellh/zig-objc/archive/c8de82ff80281215ad92900866dab7103a8efa8b.tar.gz",
             .hash = "zig_objc-0.0.0-Ir_Sp9gsAQCPAJc0oF5xoWePHWP6Y6tCphDeyNUThJoi",
         },
-        .capture = .{
-            .path = "../../pkg/capture",
-        },
         .tft_capture = .{
             .path = "../../sdk/pkg/capture",
+        },
+        .tft_stream = .{
+            .path = "../../sdk/pkg/stream",
         },
         .vision = .{
             .path = "../../pkg/vision",

@@ -32,15 +32,15 @@ pub fn build(b: *std.Build) void {
     mod_macos.linkFramework("ScreenCaptureKit", .{});
     mod_objc.linkSystemLibrary("objc", .{});
 
-    const mod_capture = b.dependency("capture", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("capture");
-
     const mod_tft_capture = b.dependency("tft_capture", .{
         .target = target,
         .optimize = optimize,
     }).module("capture");
+
+    const mod_tft_stream = b.dependency("tft_stream", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("stream");
 
     const mod_vision = b.dependency("vision", .{
         .target = target,
@@ -55,8 +55,8 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "macos", .module = mod_macos },
             .{ .name = "objc", .module = mod_objc },
-            .{ .name = "capture", .module = mod_capture },
             .{ .name = "tft/capture", .module = mod_tft_capture },
+            .{ .name = "tft/stream", .module = mod_tft_stream },
             .{ .name = "vision", .module = mod_vision },
         },
     });
@@ -83,8 +83,10 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .link_libc = true,
             .imports = &.{
-                .{ .name = "capture", .module = mod_capture },
+                .{ .name = "macos", .module = mod_macos },
+                .{ .name = "objc", .module = mod_objc },
                 .{ .name = "tft/capture", .module = mod_tft_capture },
+                .{ .name = "tft/stream", .module = mod_tft_stream },
                 .{ .name = "vision", .module = mod_vision },
             },
         }),

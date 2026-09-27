@@ -1,8 +1,7 @@
 const napi = @import("napi-zig");
-const cap = @import("capture");
 const Self = @import("Self.zig");
 
-const ResolveConfig = cap.ResolveConfig;
+const ResolveConfig = @import("tft/stream").Encoder.ResolveConfig;
 
 pub fn getStreamConfig(self: *Self, env: napi.Env) !napi.Val {
     const renderer = self.renderer orelse return env.createNull();
