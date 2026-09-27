@@ -1,18 +1,11 @@
 const std = @import("std");
 const macos = @import("macos");
-const objc = @import("objc");
 const stream = @import("tft/stream");
 const CaptureNode = @import("CaptureNode.zig");
-const Quad = struct {
-    origin: @Vector(2, f32),
-    size: @Vector(2, f32),
-    canvas: @Vector(2, f32),
-};
 
 const Allocator = std.mem.Allocator;
 
 const mtl = macos.Metal;
-const Texture = stream.Texture;
 
 const Self = @This();
 const Encoder = stream.Encoder.Of(*Self);
@@ -92,37 +85,21 @@ pub fn deinit(self: *Self) void {
     self.allocator.destroy(self);
 }
 
-fn handleRender(self: *Self, ctx: *Context) void {
-    self.draw(ctx) catch |err| std.log.err("render failed: {s}", .{@errorName(err)});
-}
+fn handleRender(core: *Self, context: *Context) void {
+    const Block = struct {
+        fn draw(self: *Self, ctx: *Context) !void {
+            const pipeline = try self.renderer.device.pipelines.getByOptions(.{
+                .vertexFunction = self.shader_draw.function(.vertex_quad),
+                .fragmentFunction = self.shader_draw.function(.draw_source),
+                .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },
+            });
 
-fn draw(self: *Self, ctx: *Context) !void {
-    const pool = objc.AutoreleasePool.init();
-    defer pool.deinit();
-
-    const texture = (try self.source.getTexture(self.renderer.device.device)) orelse return;
-    defer texture.release();
-
-    try self.drawSource(ctx, texture);
-}
-
-fn drawSource(self: *Self, ctx: *Context, source: *Texture) !void {
-    const canvas: @Vector(2, f32) = .{ @floatFromInt(self.renderer.width), @floatFromInt(self.renderer.height) };
-    const source_size: @Vector(2, f32) = .{ @floatFromInt(source.width()), @floatFromInt(source.height()) };
-    const scale = @min(canvas[0] / source_size[0], canvas[1] / source_size[1]);
-    const size = source_size * @as(@Vector(2, f32), @splat(scale));
-    const center = self.source.calcRect(canvas);
-    const quad: Quad = .{ .origin = center - size / @as(@Vector(2, f32), @splat(2)), .size = size, .canvas = canvas };
-    const pipeline = try self.renderer.device.pipelines.getByOptions(.{
-        .vertexFunction = self.shader_draw.function(.vertex_quad),
-        .fragmentFunction = self.shader_draw.function(.draw_source),
-        .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },
-    });
-
-    ctx.encoder.msgSend(void, "setRenderPipelineState:", .{pipeline});
-    ctx.encoder.msgSend(void, "setVertexBytes:length:atIndex:", .{ &quad, @as(usize, @sizeOf(Quad)), @as(usize, 0) });
-    ctx.encoder.msgSend(void, "setFragmentTexture:atIndex:", .{ source.obj, @as(usize, 0) });
-    ctx.encoder.msgSend(void, "drawPrimitives:vertexStart:vertexCount:", .{ mtl.MTLPrimitiveTypeTriangleStrip, @as(usize, 0), @as(usize, 4) });
+            try self.source.draw(ctx, pipeline);
+        }
+    };
+    Block.draw(core, context) catch |err| {
+        std.log.err("render failed: {s}", .{@errorName(err)});
+    };
 }
 
 fn handleFrame(self: *Self, frame: *Frame) void {
