@@ -1,7 +1,7 @@
 const std = @import("std");
 const objc = @import("objc");
 const Self = @import("Self.zig");
-const log = std.log.scoped(.vision);
+const log = std.log.scoped(.inference);
 
 pub fn performRequests(self: *Self, handler: objc.Object) !void {
     var error_id: objc.c.id = null;

@@ -1,7 +1,7 @@
 const std = @import("std");
-const vision = @import("vision");
+const inference = @import("inference");
 
-const Infer = vision.Infer;
+const Infer = inference.Infer;
 
 const max_image_bytes = 32 * 1024 * 1024;
 
@@ -34,19 +34,19 @@ fn run(init: std.process.Init) !void {
     };
     defer allocator.free(png_bytes);
 
-    const image_data = vision.allocNSDataFromBytes(png_bytes) catch |err| {
+    const image_data = inference.allocNSDataFromBytes(png_bytes) catch |err| {
         report(init.io, "failed to create image data for '{s}': {s}\n", .{ path, @errorName(err) });
         return error.Reported;
     };
     defer image_data.release();
 
-    const inference = Infer.create(allocator, .{}) catch |err| {
+    const infer = Infer.create(allocator, .{}) catch |err| {
         report(init.io, "failed to initialize Vision: {s}\n", .{@errorName(err)});
         return error.Reported;
     };
-    defer inference.destroy();
+    defer infer.destroy();
 
-    const result = inference.run(.{ .data = image_data }, .{}) catch |err| {
+    const result = infer.run(.{ .data = image_data }, .{}) catch |err| {
         report(init.io, "failed to recognize text in '{s}': {s}\n", .{ path, @errorName(err) });
         return error.Reported;
     };

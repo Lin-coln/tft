@@ -1,7 +1,7 @@
 .{
-    .name = .vision,
+    .name = .inference,
     .version = "0.1.0",
-    .fingerprint = 0x8e789ea9ee2483aa,
+    .fingerprint = 0xdd5c89e94fc5e518,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .macos = .{

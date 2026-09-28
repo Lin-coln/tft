@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     if (target.result.os.tag != .macos) {
-        @panic("pkg/vision requires a macOS target");
+        @panic("pkg/inference requires a macOS target");
     }
 
     const objc = b.dependency("zig_objc", .{
@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("pipeline");
 
-    const vision = b.addModule("vision", .{
+    const inference = b.addModule("inference", .{
         .root_source_file = b.path("root.zig"),
         .target = target,
         .optimize = optimize,
@@ -36,25 +36,25 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    vision.linkFramework("CoreGraphics", .{});
-    vision.linkFramework("CoreImage", .{});
-    vision.linkFramework("IOSurface", .{});
-    vision.linkFramework("CoreMedia", .{});
-    vision.linkFramework("CoreVideo", .{});
-    vision.linkFramework("Foundation", .{});
-    vision.linkFramework("Vision", .{});
-    vision.linkSystemLibrary("objc", .{});
+    inference.linkFramework("CoreGraphics", .{});
+    inference.linkFramework("CoreImage", .{});
+    inference.linkFramework("IOSurface", .{});
+    inference.linkFramework("CoreMedia", .{});
+    inference.linkFramework("CoreVideo", .{});
+    inference.linkFramework("Foundation", .{});
+    inference.linkFramework("Vision", .{});
+    inference.linkSystemLibrary("objc", .{});
 
     const cli = b.createModule(.{
         .root_source_file = b.path("src/run.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
-        .imports = &.{.{ .name = "vision", .module = vision }},
+        .imports = &.{.{ .name = "inference", .module = inference }},
     });
 
     const executable = b.addExecutable(.{
-        .name = "vision-ocr",
+        .name = "inference-ocr",
         .root_module = cli,
     });
     b.installArtifact(executable);
@@ -65,7 +65,7 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Recognize text in a PNG image");
     run_step.dependOn(&run.step);
 
-    const tests = b.addTest(.{ .root_module = vision });
+    const tests = b.addTest(.{ .root_module = inference });
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run vision OCR tests");
     test_step.dependOn(&run_tests.step);

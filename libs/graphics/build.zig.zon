@@ -17,8 +17,8 @@
         .tft_stream = .{
             .path = "../../sdk/pkg/stream",
         },
-        .vision = .{
-            .path = "../../pkg/vision",
+        .inference = .{
+            .path = "../../pkg/inference",
         },
         .napi_zig = .{
             .url = "https://github.com/yuku-toolchain/napi-zig/archive/refs/tags/v0.2.8.tar.gz",

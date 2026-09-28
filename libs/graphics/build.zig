@@ -42,10 +42,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("stream");
 
-    const mod_vision = b.dependency("vision", .{
+    const mod_inference = b.dependency("inference", .{
         .target = target,
         .optimize = optimize,
-    }).module("vision");
+    }).module("inference");
 
     napi_zig.addLib(b, napi_dep, .{
         .name = "addon",
@@ -57,7 +57,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "objc", .module = mod_objc },
             .{ .name = "tft/capture", .module = mod_tft_capture },
             .{ .name = "tft/stream", .module = mod_tft_stream },
-            .{ .name = "vision", .module = mod_vision },
+            .{ .name = "inference", .module = mod_inference },
         },
     });
 
