@@ -9,16 +9,8 @@ const mtl = macos.Metal;
 
 const Self = @This();
 const Encoder = stream.Encoder.Of(*Self);
-const Shader = stream.Device.Shader.Of(
-    enum { vertex_quad, draw_source },
-    .{
-        .vertex_quad = .vertex,
-        .draw_source = .fragment,
-    },
-);
-const Renderer = stream.Renderer.Of(Self, handleRender, handleFrame);
-const Context = stream.Renderer.Context;
-const Frame = stream.Renderer.Frame;
+const Shader = @import("handleRender.zig").Shader;
+const Renderer = @import("handleRender.zig").Renderer;
 const Packet = Encoder.Packet;
 
 allocator: Allocator,
@@ -83,30 +75,6 @@ pub fn deinit(self: *Self) void {
     self.encoder.destroy();
     self.shader_draw.destroy();
     self.allocator.destroy(self);
-}
-
-fn handleRender(core: *Self, context: *Context) void {
-    const Block = struct {
-        fn draw(self: *Self, ctx: *Context) !void {
-            const pipeline = try self.renderer.device.pipelines.getByOptions(.{
-                .vertexFunction = self.shader_draw.function(.vertex_quad),
-                .fragmentFunction = self.shader_draw.function(.draw_source),
-                .color = .{ .pixelFormat = mtl.MTLPixelFormatBGRA8Unorm },
-            });
-
-            try self.source.draw(ctx, pipeline);
-        }
-    };
-    Block.draw(core, context) catch |err| {
-        std.log.err("render failed: {s}", .{@errorName(err)});
-    };
-}
-
-fn handleFrame(self: *Self, frame: *Frame) void {
-    self.encoder.post(frame) catch |err| {
-        std.log.err("frame post failed: {s}", .{@errorName(err)});
-        frame.destroy();
-    };
 }
 
 fn handleEncodedPacket(self: *Self, borrowed: *Packet) !void {
