@@ -4,18 +4,17 @@ const objc = @import("objc");
 const Self = @This();
 
 allocator: std.mem.Allocator,
-request: objc.Object,
-requests: objc.Object,
 candidate_count: usize,
+request: objc.Object = undefined,
+requests: objc.Object = undefined,
 
-pub const Language = @import("_init_request.zig").Language;
-pub const RecognitionLevel = @import("_init_request.zig").RecognitionLevel;
-pub const Input = @import("_init_handler.zig").Input;
-pub const Region = @import("_set_region_of_interest.zig").Region;
-pub const Results = @import("_read_results.zig").Results;
+pub const Language = @import("createRequests.zig").Language;
+pub const RecognitionLevel = @import("createRequests.zig").RecognitionLevel;
+pub const Input = @import("createHandler.zig").Input;
+pub const Region = @import("setRegionOfInterest.zig").Region;
+pub const Results = @import("readResults.zig").Results;
 
 pub const Options = struct {
-    allocator: std.mem.Allocator,
     languages: []const Language = &.{ .simplified_chinese, .english_us },
     recognition_level: RecognitionLevel = .accurate,
     uses_language_correction: bool = false,
@@ -27,19 +26,21 @@ pub const RunOptions = struct {
     region_of_interest: Region = .full,
 };
 
-pub fn init(options: Options) !*Self {
+pub fn create(allocator: std.mem.Allocator, options: Options) !*Self {
     if (options.candidate_count == 0) return error.InvalidOptions;
 
-    const self = try options.allocator.create(Self);
-    errdefer options.allocator.destroy(self);
+    const self = try allocator.create(Self);
+    errdefer allocator.destroy(self);
 
-    self.allocator = options.allocator;
-    self.candidate_count = options.candidate_count;
-    try @import("_init_request.zig")._initRequest(self, options);
+    self.* = .{
+        .allocator = allocator,
+        .candidate_count = options.candidate_count,
+    };
+    try @import("createRequests.zig").createRequests(self, options);
     return self;
 }
 
-pub fn deinit(self: *Self) void {
+pub fn destroy(self: *Self) void {
     self.requests.release();
     self.request.release();
     self.allocator.destroy(self);
@@ -51,17 +52,66 @@ pub fn run(self: *Self, input: Input, options: RunOptions) !Results {
     const pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
-    try @import("_set_region_of_interest.zig")._setRegionOfInterest(self, options.region_of_interest);
+    try @import("setRegionOfInterest.zig").setRegionOfInterest(self, options.region_of_interest);
 
-    const handler = try @import("_init_handler.zig")._initHandler(input);
+    const handler = try @import("createHandler.zig").createHandler(input);
     defer handler.release();
 
-    try @import("_perform_requests.zig")._performRequests(self, handler);
-    return @import("_read_results.zig")._readResults(self);
+    try @import("performRequests.zig").performRequests(self, handler);
+    return @import("readResults.zig").readResults(self);
 }
 
-test {
-    _ = @import("_set_region_of_interest.zig");
-    _ = @import("_read_results.zig");
-    _ = @import("_tests.zig");
+fn createAndDestroy(allocator: std.mem.Allocator) !void {
+    const infer = try create(allocator, .{});
+    defer infer.destroy();
+}
+
+test "create cleans up when allocation fails" {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, createAndDestroy, .{});
+}
+
+test "create rejects invalid options" {
+    try std.testing.expectError(error.InvalidOptions, create(std.testing.allocator, .{
+        .candidate_count = 0,
+    }));
+    try std.testing.expectError(error.InvalidOptions, create(std.testing.allocator, .{
+        .languages = &.{},
+    }));
+}
+
+test "run accepts IOSurface and reuses the OCR request" {
+    const macos = @import("macos");
+    const cf = macos.CoreFoundation;
+    const cv = macos.CoreVideo;
+    const ios = macos.IOSurface;
+
+    const properties = cf.CFDictionaryCreateMutable(null, 0, null, null) orelse
+        return error.TestAllocationFailed;
+    defer cf.CFRelease(properties);
+
+    const keys = [_]cf.CFStringRef{
+        ios.kIOSurfaceWidth,
+        ios.kIOSurfaceHeight,
+        ios.kIOSurfaceBytesPerElement,
+        ios.kIOSurfacePixelFormat,
+    };
+    const values = [_]i64{ 64, 64, 4, cv.kCVPixelFormatType_32BGRA };
+    var numbers: [values.len]cf.CFNumberRef = undefined;
+    var initialized: usize = 0;
+    defer for (numbers[0..initialized]) |number| cf.CFRelease(number);
+    for (keys, values, 0..) |key, value, index| {
+        numbers[index] = cf.CFNumberCreate(null, cf.kCFNumberSInt64Type, &value) orelse
+            return error.TestAllocationFailed;
+        initialized += 1;
+        cf.CFDictionarySetValue(properties, key, numbers[index]);
+    }
+    const surface = ios.IOSurfaceCreate(properties) orelse return error.TestSurfaceCreationFailed;
+    defer cf.CFRelease(surface);
+
+    const infer = try create(std.testing.allocator, .{});
+    defer infer.destroy();
+    for (0..2) |_| {
+        const result = try infer.run(.{ .io_surface = surface }, .{});
+        defer result.deinit();
+    }
 }

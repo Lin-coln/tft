@@ -40,11 +40,11 @@ fn run(init: std.process.Init) !void {
     };
     defer image_data.release();
 
-    const inference = Infer.init(.{ .allocator = allocator }) catch |err| {
+    const inference = Infer.create(allocator, .{}) catch |err| {
         report(init.io, "failed to initialize Vision: {s}\n", .{@errorName(err)});
         return error.Reported;
     };
-    defer inference.deinit();
+    defer inference.destroy();
 
     const result = inference.run(.{ .data = image_data }, .{}) catch |err| {
         report(init.io, "failed to recognize text in '{s}': {s}\n", .{ path, @errorName(err) });

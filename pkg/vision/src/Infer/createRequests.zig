@@ -25,7 +25,7 @@ pub const RecognitionLevel = enum(isize) {
     fast = 1,
 };
 
-pub fn _initRequest(self: *Self, options: Self.Options) !void {
+pub fn createRequests(self: *Self, options: Self.Options) !void {
     if (options.languages.len == 0) {
         return error.InvalidOptions;
     }
@@ -36,23 +36,21 @@ pub fn _initRequest(self: *Self, options: Self.Options) !void {
     const pool = objc.AutoreleasePool.init();
     defer pool.deinit();
 
-    const request = init: {
-        const Class = objc.getClass("VNRecognizeTextRequest") orelse return error.VisionClassUnavailable;
-        const allocated = Class.msgSend(objc.Object, "alloc", .{});
-        if (allocated.value == null) return error.RequestCreationFailed;
-        break :init allocated.msgSend(objc.Object, "init", .{});
-    };
-    if (request.value == null) return error.RequestCreationFailed;
-    errdefer request.release();
+    self.request = objc.getClass("VNRecognizeTextRequest").?.msgSend(
+        objc.Object,
+        "alloc",
+        .{},
+    ).msgSend(objc.Object, "init", .{});
+    errdefer self.request.release();
+    if (self.request.value == null) return error.RequestCreationFailed;
 
     var language_values: std.ArrayList(objc.c.id) = .empty;
     defer language_values.deinit(self.allocator);
     try language_values.ensureTotalCapacity(self.allocator, options.languages.len);
 
-    const NSString = objc.getClass("NSString").?;
     for (options.languages) |language| {
         const tag = language.tag();
-        const value = NSString.msgSend(
+        const value = objc.getClass("NSString").?.msgSend(
             objc.Object,
             "stringWithBytes:length:encoding:",
             .{ tag.ptr, tag.len, NSUTF8StringEncoding },
@@ -69,23 +67,21 @@ pub fn _initRequest(self: *Self, options: Self.Options) !void {
 
     if (languages.value == null) return error.LanguageArrayCreationFailed;
 
-    request.setProperty("recognitionLevel", @intFromEnum(options.recognition_level));
-    request.setProperty("recognitionLanguages", languages);
-    request.setProperty("usesLanguageCorrection", options.uses_language_correction);
-    request.setProperty("minimumTextHeight", options.minimum_text_height);
+    self.request.setProperty("recognitionLevel", @intFromEnum(options.recognition_level));
+    self.request.setProperty("recognitionLanguages", languages);
+    self.request.setProperty("usesLanguageCorrection", options.uses_language_correction);
+    self.request.setProperty("minimumTextHeight", options.minimum_text_height);
 
-    const request_values = [_]objc.c.id{request.value};
-    const requests = init: {
-        const allocated = objc.getClass("NSArray").?.msgSend(objc.Object, "alloc", .{});
-        if (allocated.value == null) return error.RequestArrayCreationFailed;
-        break :init allocated.msgSend(
-            objc.Object,
-            "initWithObjects:count:",
-            .{ &request_values, request_values.len },
-        );
-    };
-    if (requests.value == null) return error.RequestArrayCreationFailed;
-
-    self.request = request;
-    self.requests = requests;
+    const request_values = [_]objc.c.id{self.request.value};
+    self.requests = objc.getClass("NSArray").?.msgSend(
+        objc.Object,
+        "alloc",
+        .{},
+    ).msgSend(
+        objc.Object,
+        "initWithObjects:count:",
+        .{ &request_values, request_values.len },
+    );
+    errdefer self.requests.release();
+    if (self.requests.value == null) return error.RequestArrayCreationFailed;
 }

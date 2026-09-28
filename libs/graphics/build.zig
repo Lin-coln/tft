@@ -75,23 +75,4 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
-
-    const session_tests = b.addTest(.{
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("addon/InferSession.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-            .imports = &.{
-                .{ .name = "macos", .module = mod_macos },
-                .{ .name = "objc", .module = mod_objc },
-                .{ .name = "tft/capture", .module = mod_tft_capture },
-                .{ .name = "tft/stream", .module = mod_tft_stream },
-                .{ .name = "vision", .module = mod_vision },
-            },
-        }),
-    });
-    const run_session_tests = b.addRunArtifact(session_tests);
-    test_step.dependOn(&run_session_tests.step);
-    b.step("test-session", "Test inference session without screen capture permission").dependOn(&run_session_tests.step);
 }

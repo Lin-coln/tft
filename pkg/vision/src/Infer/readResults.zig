@@ -20,7 +20,7 @@ pub const Results = struct {
     }
 };
 
-pub fn _readResults(self: *Self) !Results {
+pub fn readResults(self: *Self) !Results {
     const allocator = self.allocator;
     const observations = self.request.getProperty(objc.Object, "results");
     if (observations.value == null) return error.InvalidVisionResult;

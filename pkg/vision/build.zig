@@ -19,14 +19,20 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("macos");
 
+    const tft_pipeline = b.dependency("tft_pipeline", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("pipeline");
+
     const vision = b.addModule("vision", .{
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("root.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
         .imports = &.{
             .{ .name = "macos", .module = macos },
             .{ .name = "objc", .module = objc },
+            .{ .name = "tft/pipeline", .module = tft_pipeline },
         },
     });
 

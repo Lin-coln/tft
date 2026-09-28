@@ -32,7 +32,7 @@ pub const Region = struct {
     }
 };
 
-pub fn _setRegionOfInterest(self: *Self, region: Region) !void {
+pub fn setRegionOfInterest(self: *Self, region: Region) !void {
     if (!region.isValid()) return error.InvalidRegionOfInterest;
     self.request.setProperty("regionOfInterest", region.rect());
 }
