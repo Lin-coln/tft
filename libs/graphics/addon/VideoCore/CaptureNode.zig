@@ -66,21 +66,24 @@ pub fn draw(
     });
     defer texture.release();
 
-    const sz_parent: @Vector(2, f32) = .{ @floatFromInt(ctx.width), @floatFromInt(ctx.height) };
-    const sz_origin: @Vector(2, f32) = .{ @floatFromInt(texture.width()), @floatFromInt(texture.height()) };
-    const scale = @min(sz_parent[0] / sz_origin[0], sz_parent[1] / sz_origin[1]);
-    const size = sz_origin * @as(@Vector(2, f32), @splat(scale));
-    const center = sz_parent / @as(@Vector(2, f32), @splat(2));
-    const origin = center - size / @as(@Vector(2, f32), @splat(2));
+    const canvas_width: f32 = @floatFromInt(ctx.width);
+    const canvas_height: f32 = @floatFromInt(ctx.height);
+    const source_width: f32 = @floatFromInt(texture.width());
+    const source_height: f32 = @floatFromInt(texture.height());
+    const scale = @min(canvas_width / source_width, canvas_height / source_height);
+    const width = source_width * scale / canvas_width;
+    const height = source_height * scale / canvas_height;
     const transform: [4]@Vector(4, f32) = .{
-        .{ size[0] / sz_parent[0] * 2, 0, 0, 0 },
-        .{ 0, size[1] / sz_parent[1] * -2, 0, 0 },
+        .{ width * 2, 0, 0, 0 },
+        .{ 0, height * -2, 0, 0 },
         .{ 0, 0, 1, 0 },
-        .{ origin[0] / sz_parent[0] * 2 - 1, 1 - origin[1] / sz_parent[1] * 2, 0, 1 },
+        .{ -width, height, 0, 1 },
     };
+    const transform_size: usize = @sizeOf(@TypeOf(transform));
+    const transform_index: usize = 0;
 
     ctx.encoder.msgSend(void, "setRenderPipelineState:", .{pipeline});
-    ctx.encoder.msgSend(void, "setVertexBytes:length:atIndex:", .{ &transform, @as(usize, @sizeOf([4]@Vector(4, f32))), @as(usize, 0) });
+    ctx.encoder.msgSend(void, "setVertexBytes:length:atIndex:", .{ &transform, transform_size, transform_index });
     ctx.encoder.msgSend(void, "setFragmentTexture:atIndex:", .{ texture.obj, @as(usize, 0) });
     ctx.encoder.msgSend(void, "drawPrimitives:vertexStart:vertexCount:", .{ mtl.MTLPrimitiveTypeTriangleStrip, @as(usize, 0), @as(usize, 4) });
 }
